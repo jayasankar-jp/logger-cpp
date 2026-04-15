@@ -135,7 +135,7 @@ target_link_libraries(app Logger)
 | `log_error`  | Error messages  |
 | `log_debug`  | Debug messages  |
 | `log_info`   | Informational   |
-| `log_verbos` | Verbose logging |
+| `log_verbose` | Verbose logging |
 
 ---
 
@@ -152,6 +152,8 @@ Logs are stored in:
 ```
 LOGS/MQTT_APP_15-04-2026.log
 ```
+
+Here’s your updated **Configuration section** with the new options added, clean and consistent:
 
 ---
 
@@ -175,7 +177,43 @@ log->setLogPath("./LOGS");
 log->setLogLevel(31);
 ```
 
+## 🔹 Set Max File Generation Period (Minutes)
+
+```cpp
+log->setMaxFileGenPeriodMin(10);
+```
+
+**Description:**
+
+* Creates a new log file after the specified time interval.
+* Example: `10` → new file every 10 minutes.
+
 ---
+
+## 🔹 Set Max File Size (MB)
+
+```cpp
+log->setMaxFileSizeMB(5);
+```
+
+**Description:**
+
+* Limits how large a log file can grow.
+* When exceeded, a new log file is created.
+* Example: `5` → max 5 MB per file.
+
+---
+
+## 📌 Notes
+
+* Log rotation happens when **either condition is met**:
+
+  * ⏱️ Time limit (`setMaxFileGenPeriodMin`)
+  * 📦 Size limit (`setMaxFileSizeMB`)
+
+---
+
+
 
 # 🧠 Features
 
@@ -217,3 +255,5 @@ log->setLogLevel(31);
 # ⭐ Contributing
 
 Pull requests are welcome!
+
+If you encounter any issues, bugs, or have feature requests, please open an issue on GitHub.

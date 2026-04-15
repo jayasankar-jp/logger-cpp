@@ -7,6 +7,9 @@ Logger::Logger()
     loglevel = 0;
     appName = "APP";
     path = "./LOGS";
+    maxFileSizeMB = 0;
+    curentFileSize = 0;
+    fileGenPeriodMin = 60;
     // isActiveFile = false;
 }
 Logger::~Logger()
@@ -85,9 +88,11 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
         {
             try
             {
-                std::string date, time;
-                mefn_getCurrentTime(date, time);
-                std::string file_name = path + "/" + appName + "_" + date + "_" + time + ".log";
+                std::string date, Time;
+                lastTime = time(0);
+
+                mefn_getCurrentTime(date, Time);
+                std::string file_name = path + "/" + appName + "_" + date + "_" + Time + ".log";
                 // std::cout << file_name << std::endl;
                 filePtr = std::make_shared<std::ofstream>();
 
@@ -121,11 +126,32 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
                         // std::cout << "Write file " << std::endl;
                         (*filePtr) << logbuff.str();
                         filePtr->flush();
+                        time_t current_time = time(0);
+                        if (maxFileSizeMB)
+                        {
+                            std::cout << "file size : " << curentFileSize << std::endl;
+                            curentFileSize += logbuff.str().length();
+                            if (maxFileSizeMB * 1024 * 1024 <= curentFileSize)
+                            {
+                                curentFileSize = 0;
+                                filePtr->close();
+                                filePtr.reset();
+                                lastTime = current_time;
+                            }
+                        }
+                        // std::cout << "last - curr : " << current_time - lastTime << std::endl;
+                        if (current_time - lastTime > fileGenPeriodMin * 60)
+                        {
+                            curentFileSize = 0;
+                            filePtr->close();
+                            filePtr.reset();
+                            lastTime = current_time;
+                        }
                     }
-                    else
-                    {
-                        std::cout << "Faild to open log file " << std::endl;
-                    }
+                }
+                else
+                {
+                    std::cout << "Faild to open log file " << std::endl;
                 }
             }
         }
