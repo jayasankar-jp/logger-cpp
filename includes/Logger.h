@@ -1,5 +1,6 @@
 #ifndef __LOGGER_LIB_H__
 #define __LOGGER_LIB_H__
+#include "Defines.h"
 #include "LogStream.h"
 #include <fstream>
 #include <mutex>
@@ -7,11 +8,7 @@
 #include <sstream>
 #include <iomanip>
 #include <memory>
-#define ERROR_LEVEL 1
-#define INFO_LEVEL 2
-#define VERBOSE_LEVEL 4
-#define DEBUG_LEVEL 8
-#define CONSOLE_LEVEL 16
+
 class Logger
 {
 private:
@@ -24,17 +21,16 @@ private:
     int fileGenPeriodMin;
 
     static std::mutex mtx;
-    // std::ofstream file;
-    std::shared_ptr<std::ofstream> filePtr;
-    // Logger *instance;
+    std::mutex time_mx;
+    std::ofstream current_file;
     static std::shared_ptr<Logger> instance;
-    // bool isActiveFile;
+    bool isActiveFile;
     void mefn_getCurrentTime(std::string &date, std::string &timeStr);
-    // void mefn_write(const std::string& msg);
     std::string mefn_getCurrentTime();
-    std::string mefn_getLogType(int LOG_LEVEL);
+    std::string mefn_getLogType(LogLevel LOG_LEVEL);
     time_t lastTime;
     Logger();
+
     // static Logger instance;
 
 public:
@@ -44,7 +40,7 @@ public:
     void setLogPath(std::string logPath);
     void setMaxFileSizeMB(int level);
     void setMaxFileGenPeriodMin(int per);
-    void write(const char *file, int line, int LOG_LEVEL, const std::string &msg);
+    void write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg);
     static std::shared_ptr<Logger> getInstance();
 };
 inline void Logger::setMaxFileGenPeriodMin(int per)
@@ -68,8 +64,8 @@ inline void Logger::setLogPath(std::string logPath)
 {
     path = logPath;
 }
-#define log_error LogStream(__FILE__, __LINE__, ERROR_LEVEL)
-#define log_verbose LogStream(__FILE__, __LINE__, VERBOSE_LEVEL)
-#define log_info LogStream(__FILE__, __LINE__, INFO_LEVEL)
-#define log_debug LogStream(__FILE__, __LINE__, DEBUG_LEVEL)
+#define log_error LogStream(__FILE__, __LINE__, LogLevel::Error)
+#define log_verbose LogStream(__FILE__, __LINE__, LogLevel::Verbose)
+#define log_info LogStream(__FILE__, __LINE__, LogLevel::Info)
+#define log_debug LogStream(__FILE__, __LINE__, LogLevel::Debug)
 #endif

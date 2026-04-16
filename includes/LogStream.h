@@ -3,7 +3,7 @@
 
 #include <sstream>
 #include <string>
-#include "Logger.h"
+#include "Defines.h"
 
 // Forward declaration (important)
 class Logger;
@@ -11,7 +11,7 @@ class Logger;
 class LogStream
 {
 public:
-    LogStream(const char *file, int line, int level);
+    LogStream(const char *file, int line, LogLevel level);
 
     template <typename T>
     LogStream &operator<<(const T &value)
@@ -26,7 +26,7 @@ private:
     std::ostringstream buffer;
     const char *file;
     int line;
-    int level;
+    LogLevel level;
 };
 
 #endif
