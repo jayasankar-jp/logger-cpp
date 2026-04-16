@@ -7,7 +7,7 @@ Logger::Logger()
     loglevel = 0;
     appName = "APP";
     path = "./LOGS";
-    maxFileSizeMB = 0;
+    maxFileSizeMB = 50;
     curentFileSize = 0;
     fileGenPeriodMin = 60;
     // isActiveFile = false;
@@ -71,7 +71,7 @@ std::string Logger::mefn_getLogType(int LOG_LEVEL)
     case 2:
         return "[info]";
     case 4:
-        return "[verbos]";
+        return "[verbose]";
     case 8:
         return "[debug]";
     }
@@ -80,10 +80,9 @@ std::string Logger::mefn_getLogType(int LOG_LEVEL)
 void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string &msg)
 {
     // std::cout << file << std::endl;
-    std::lock_guard<std::mutex> lg(mu);
+    std::lock_guard<std::mutex> lg(mtx);
     if (loglevel > 0)
     {
-        std::string prefex;
         if (!filePtr)
         {
             try
@@ -129,7 +128,7 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
                         time_t current_time = time(0);
                         if (maxFileSizeMB)
                         {
-                            std::cout << "file size : " << curentFileSize << std::endl;
+                            // std::cout << "file size : " << curentFileSize << std::endl;
                             curentFileSize += logbuff.str().length();
                             if (maxFileSizeMB * 1024 * 1024 <= curentFileSize)
                             {
