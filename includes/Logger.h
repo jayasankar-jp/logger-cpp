@@ -16,7 +16,7 @@ class Logger
 {
 private:
     int loglevel;
-    std::mutex mu;
+
     std::string appName;
     std::string path;
     int maxFileSizeMB;
