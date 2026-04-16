@@ -4,18 +4,36 @@
 int main()
 {
     std::shared_ptr<Logger> log = Logger::getInstance();
-    log->setLogLevel(15); // 31
+    log->setLogLevel(31); // 31
     log->setAppName("MY_TEST_APP");
+    log->setMaxFileSizeMB(10);
+    log->setMaxFileGenPeriodMin(1);
+
     int data = 0;
+    std::thread([]
+                {
+        while (true)
+        {
+            int thread_id = 1;
+            log_error << thread_id << " Execption : ";
+            log_info << thread_id << " INFO a";
+            log_debug << thread_id << " MY DEBUG MESSGAE";
+            // std::this_thread::sleep_for(std::chrono::seconds(1));
+        } })
+        .detach();
+    std::thread([]
+                {
+        while (true)
+        {
+            int thread_id = 2;
+            log_error << thread_id << " MY test : ";
+            log_info << thread_id << " INFO test 2";
+            log_debug << thread_id << " MY DEBUG test test test test";
+            // std::this_thread::sleep_for(std::chrono::seconds(2));
+        } })
+        .detach();
+    log_info << " Login Thread : ";
     while (true)
-    {
-        log_error << "Execption : " << data++;
-        log_info << "INFO TEST";
-        log_debug << "MY DEBUG MESSGAE";
-        // std::this_thread::sleep_for(std::chrono::seconds(2));
-    }
-    // log.write(DEBUG_LEVEL, "Helo");
-    // log.write(INFO_LEVEL, "Helo INFO");
-    // log.write(ERROR_LEVEL, "Helo ERROR");
+        ;
     return 0;
 }

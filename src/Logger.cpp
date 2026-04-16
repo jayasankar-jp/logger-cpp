@@ -10,80 +10,85 @@ Logger::Logger()
     maxFileSizeMB = 50;
     curentFileSize = 0;
     fileGenPeriodMin = 60;
-    // isActiveFile = false;
+    setenv("TZ", "Asia/Kolkata", 1);
+    tzset();
+    isActiveFile = false;
 }
 Logger::~Logger()
 {
 
-    if (filePtr)
+    if (isActiveFile)
     {
-        filePtr->close();
+        current_file.close();
     }
-    filePtr.reset();
 }
 void Logger::mefn_getCurrentTime(std::string &date, std::string &timeStr)
 {
-    setenv("TZ", "Asia/Kolkata", 1);
-    tzset();
-    time_t now = time(0);
-    tm *ltm = localtime(&now);
 
-    std::stringstream d, t;
+    time_t now = time(nullptr);
+    tm ltm;
+    localtime_r(&now, &ltm);
 
-    // Format: DD-MM-YYYY
-    d << std::setw(2) << std::setfill('0') << ltm->tm_mday << "-"
-      << std::setw(2) << std::setfill('0') << (ltm->tm_mon + 1) << "-"
-      << (1900 + ltm->tm_year);
+    char date_buf[11]; // "DD-MM-YYYY"
+    char time_buf[9];  // "HH:MM:SS"
 
-    // Format: HH:MM:SS
-    t << std::setw(2) << std::setfill('0') << ltm->tm_hour << ":"
-      << std::setw(2) << std::setfill('0') << ltm->tm_min << ":"
-      << std::setw(2) << std::setfill('0') << ltm->tm_sec;
+    std::snprintf(date_buf, sizeof(date_buf),
+                  "%02u-%02u-%04u",
+                  static_cast<unsigned>(ltm.tm_mday),
+                  static_cast<unsigned>(ltm.tm_mon + 1),
+                  static_cast<unsigned>(ltm.tm_year + 1900));
 
-    date = d.str();
-    timeStr = t.str();
+    std::snprintf(time_buf, sizeof(time_buf),
+                  "%02u:%02u:%02u",
+                  static_cast<unsigned>(ltm.tm_hour),
+                  static_cast<unsigned>(ltm.tm_min),
+                  static_cast<unsigned>(ltm.tm_sec));
+
+    date.assign(date_buf);
+    timeStr.assign(time_buf);
 }
 std::string Logger::mefn_getCurrentTime()
 {
-    setenv("TZ", "Asia/Kolkata", 1);
-    tzset();
+
     time_t now = time(0);
-    tm *ltm = localtime(&now);
+    tm ltm;
+    localtime_r(&now, &ltm);
+    char buf[64];
 
-    std::stringstream data;
+    std::snprintf(buf, sizeof(buf),
+                  "[%02d-%02d-%04d]:[%02d:%02d:%02d]",
+                  ltm.tm_mday,
+                  ltm.tm_mon + 1,
+                  ltm.tm_year + 1900,
+                  ltm.tm_hour,
+                  ltm.tm_min,
+                  ltm.tm_sec);
 
-    // Format: DD-MM-YYYY
-    data << "[" << std::setw(2) << std::setfill('0') << ltm->tm_mday << "-"
-         << std::setw(2) << std::setfill('0') << (ltm->tm_mon + 1) << "-"
-         << (1900 + ltm->tm_year) << "]:["
-         << std::setw(2) << std::setfill('0') << ltm->tm_hour << ":"
-         << std::setw(2) << std::setfill('0') << ltm->tm_min << ":"
-         << std::setw(2) << std::setfill('0') << ltm->tm_sec << "]";
-
-    return data.str();
+    return std::string(buf);
 }
-std::string Logger::mefn_getLogType(int LOG_LEVEL)
+std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
 {
     switch (LOG_LEVEL)
     {
-    case 1:
+    case LogLevel::Error:
         return "[error]";
-    case 2:
+    case LogLevel::Info:
         return "[info]";
-    case 4:
+    case LogLevel::Verbose:
         return "[verbose]";
-    case 8:
+    case LogLevel::Debug:
         return "[debug]";
     }
     return "";
 }
-void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string &msg)
+void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg)
 {
     // std::cout << file << std::endl;
-    std::lock_guard<std::mutex> lg(mtx);
+
     if (loglevel > 0)
     {
-        if (!filePtr)
+        std::lock_guard<std::mutex> lg(mtx);
+        if (!isActiveFile)
         {
             try
             {
@@ -92,27 +97,21 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
 
                 mefn_getCurrentTime(date, Time);
                 std::string file_name = path + "/" + appName + "_" + date + "_" + Time + ".log";
-                // std::cout << file_name << std::endl;
-                filePtr = std::make_shared<std::ofstream>();
-
-                filePtr->open(file_name, std::ios::app);
+                current_file.open(file_name, std::ios::app);
+                isActiveFile = true;
             }
             catch (const std::exception &e)
             {
                 std::cerr << e.what() << '\n';
             }
         }
-        if (filePtr)
+        if (isActiveFile)
         {
 
-            // if (loglevel & CONSOLE_LEVEL)
-            // {
-            //     std::cout <<mefn_getLogType()
-            // }
-            if (loglevel & LOG_LEVEL)
+            if (loglevel & (int)LOG_LEVEL)
             {
-                bool consol_e = loglevel & CONSOLE_LEVEL;
-                bool file_e = filePtr->is_open();
+                bool consol_e = loglevel & (int)LogLevel::Console;
+                bool file_e = current_file.is_open();
                 std::stringstream logbuff;
 
                 if (consol_e || file_e)
@@ -123,8 +122,8 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
                     if (file_e)
                     {
                         // std::cout << "Write file " << std::endl;
-                        (*filePtr) << logbuff.str();
-                        filePtr->flush();
+                        current_file << logbuff.str();
+                        current_file.flush();
                         time_t current_time = time(0);
                         if (maxFileSizeMB)
                         {
@@ -133,8 +132,8 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
                             if (maxFileSizeMB * 1024 * 1024 <= curentFileSize)
                             {
                                 curentFileSize = 0;
-                                filePtr->close();
-                                filePtr.reset();
+                                current_file.close();
+                                isActiveFile = false;
                                 lastTime = current_time;
                             }
                         }
@@ -142,8 +141,8 @@ void Logger::write(const char *file, int line, int LOG_LEVEL, const std::string 
                         if (current_time - lastTime > fileGenPeriodMin * 60)
                         {
                             curentFileSize = 0;
-                            filePtr->close();
-                            filePtr.reset();
+                            current_file.close();
+                            isActiveFile = false;
                             lastTime = current_time;
                         }
                     }

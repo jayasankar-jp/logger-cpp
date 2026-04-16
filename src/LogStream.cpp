@@ -2,7 +2,8 @@
 #include "Logger.h"
 #include "iostream"
 #include <filesystem>
-LogStream::LogStream(const char *file, int line, int level)
+
+LogStream::LogStream(const char *file, int line, LogLevel level)
     : file(file), line(line), level(level)
 {
     // std::cout << "console trigger" << std::endl;
