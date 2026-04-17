@@ -12,5 +12,5 @@ LogStream::LogStream(const char *file, int line, LogLevel level)
 LogStream::~LogStream()
 {
     std::filesystem::path p(file);
-    Logger::getInstance()->write(p.filename().c_str(), line, level, buffer.str());
+    Logger::getInstance().write(p.filename().c_str(), line, level, buffer.str());
 }

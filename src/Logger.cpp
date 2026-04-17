@@ -1,70 +1,131 @@
 #include "Logger.h"
 #include <iostream>
-std::mutex Logger::mtx;
-std::shared_ptr<Logger> Logger::instance;
+#include <cstring>
+std::mutex Logger::memutexS_mu;
+// std::shared_ptr<Logger> Logger::meCS_instance;
+int Logger::mei_logLevel = 0;
+std::string Logger::mes_appName = "APP";
+std::string Logger::mes_filePath = "./LOGS";
+int Logger::mei_maxFileSizeMB = 50;
+int Logger::mei_fileGenPeriodMin = 60;
+bool Logger::meb_isCashEnable = true;
 Logger::Logger()
 {
-    loglevel = 0;
-    appName = "APP";
-    path = "./LOGS";
-    maxFileSizeMB = 50;
-    curentFileSize = 0;
-    fileGenPeriodMin = 60;
+
+    meui_buff_len = 0;
+    memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
+    met_CashInitialTime = time(0);
+
+    // meb_isCashEnable = false;
+    mei_bundilSizeKb = 128;
+    mei_CashTimeLimitSec = 3;
+
+    // mei_maxFileSizeMB = 50;
+    meul_curentFileSize = 0;
+
     setenv("TZ", "Asia/Kolkata", 1);
     tzset();
     isActiveFile = false;
 }
 Logger::~Logger()
 {
-
+    // std::cout << "Distructor call";
+    std::lock_guard<std::mutex> lg(memutexS_mu);
     if (isActiveFile)
     {
-        current_file.close();
+
+        meC_current_file << mecs_databuffer;
+        meC_current_file.close();
+        isActiveFile = false;
     }
 }
 void Logger::mefn_getCurrentTime(std::string &date, std::string &timeStr)
 {
-
     time_t now = time(nullptr);
+
     tm ltm;
     localtime_r(&now, &ltm);
 
-    char date_buf[11]; // "DD-MM-YYYY"
-    char time_buf[9];  // "HH:MM:SS"
+    // Pre-size strings (avoid realloc + strlen)
+    date.resize(10);   // "DD-MM-YYYY"
+    timeStr.resize(8); // "HH:MM:SS"
 
-    std::snprintf(date_buf, sizeof(date_buf),
-                  "%02u-%02u-%04u",
-                  static_cast<unsigned>(ltm.tm_mday),
-                  static_cast<unsigned>(ltm.tm_mon + 1),
-                  static_cast<unsigned>(ltm.tm_year + 1900));
+    // ---- DATE ----
+    char *d = date.data();
 
-    std::snprintf(time_buf, sizeof(time_buf),
-                  "%02u:%02u:%02u",
-                  static_cast<unsigned>(ltm.tm_hour),
-                  static_cast<unsigned>(ltm.tm_min),
-                  static_cast<unsigned>(ltm.tm_sec));
+    auto twoDigit = [](char *buf, int val)
+    {
+        buf[0] = '0' + (val / 10);
+        buf[1] = '0' + (val % 10);
+    };
 
-    date.assign(date_buf);
-    timeStr.assign(time_buf);
+    auto fourDigit = [](char *buf, int val)
+    {
+        buf[0] = '0' + (val / 1000) % 10;
+        buf[1] = '0' + (val / 100) % 10;
+        buf[2] = '0' + (val / 10) % 10;
+        buf[3] = '0' + (val % 10);
+    };
+
+    twoDigit(d + 0, ltm.tm_mday);
+    d[2] = '-';
+    twoDigit(d + 3, ltm.tm_mon + 1);
+    d[5] = '-';
+    fourDigit(d + 6, ltm.tm_year + 1900);
+
+    // ---- TIME ----
+    char *t = timeStr.data();
+
+    twoDigit(t + 0, ltm.tm_hour);
+    t[2] = ':';
+    twoDigit(t + 3, ltm.tm_min);
+    t[5] = ':';
+    twoDigit(t + 6, ltm.tm_sec);
 }
+
 std::string Logger::mefn_getCurrentTime()
 {
+    time_t now = time(nullptr);
 
-    time_t now = time(0);
     tm ltm;
     localtime_r(&now, &ltm);
-    char buf[64];
 
-    std::snprintf(buf, sizeof(buf),
-                  "[%02d-%02d-%04d]:[%02d:%02d:%02d]",
-                  ltm.tm_mday,
-                  ltm.tm_mon + 1,
-                  ltm.tm_year + 1900,
-                  ltm.tm_hour,
-                  ltm.tm_min,
-                  ltm.tm_sec);
+    char buf[32]; // exact size needed
 
-    return std::string(buf);
+    // Manual formatting (FASTER than snprintf)
+    int len = 0;
+
+    auto twoDigit = [&](int val)
+    {
+        buf[len++] = '0' + (val / 10);
+        buf[len++] = '0' + (val % 10);
+    };
+
+    auto fourDigit = [&](int val)
+    {
+        buf[len++] = '0' + (val / 1000) % 10;
+        buf[len++] = '0' + (val / 100) % 10;
+        buf[len++] = '0' + (val / 10) % 10;
+        buf[len++] = '0' + (val % 10);
+    };
+
+    buf[len++] = '[';
+    twoDigit(ltm.tm_mday);
+    buf[len++] = '-';
+    twoDigit(ltm.tm_mon + 1);
+    buf[len++] = '-';
+    fourDigit(ltm.tm_year + 1900);
+    buf[len++] = ']';
+    buf[len++] = ':';
+    buf[len++] = '[';
+    twoDigit(ltm.tm_hour);
+    buf[len++] = ':';
+    twoDigit(ltm.tm_min);
+    buf[len++] = ':';
+    twoDigit(ltm.tm_sec);
+    buf[len++] = ']';
+
+    return std::string(buf, len); // no strlen scan
 }
 std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
 {
@@ -84,20 +145,19 @@ std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
 void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg)
 {
     // std::cout << file << std::endl;
-
-    if (loglevel > 0)
+    if (mei_logLevel > 0)
     {
-        std::lock_guard<std::mutex> lg(mtx);
+        std::lock_guard<std::mutex> lg(memutexS_mu);
         if (!isActiveFile)
         {
             try
             {
                 std::string date, Time;
-                lastTime = time(0);
+                met_initialTime = time(0);
 
                 mefn_getCurrentTime(date, Time);
-                std::string file_name = path + "/" + appName + "_" + date + "_" + Time + ".log";
-                current_file.open(file_name, std::ios::app);
+                std::string file_name = mes_filePath + "/" + mes_appName + "_" + date + "_" + Time + ".log";
+                meC_current_file.open(file_name, std::ios::app);
                 isActiveFile = true;
             }
             catch (const std::exception &e)
@@ -108,62 +168,96 @@ void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::st
         if (isActiveFile)
         {
 
-            if (loglevel & (int)LOG_LEVEL)
+            if (mei_logLevel & (int)LOG_LEVEL)
             {
-                bool consol_e = loglevel & (int)LogLevel::Console;
-                bool file_e = current_file.is_open();
+                bool consol_e = mei_logLevel & (int)LogLevel::Console;
+                bool file_e = meC_current_file.is_open();
                 std::stringstream logbuff;
-
+                time_t tl_currentTime = time(0);
                 if (consol_e || file_e)
                 {
-                    logbuff << "[" << appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
-                    if (consol_e)
-                        std::cout << logbuff.str();
+                    logbuff << "[" << mes_appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
+                    if (meb_isCashEnable)
+                    {
+
+                        std::string tempBuf = logbuff.str();
+
+                        // strcat(mecs_databuffer, tempBuf.c_str());
+                        // meui_buff_len += tempBuf.length();
+                        memcpy(mecs_databuffer + meui_buff_len, tempBuf.data(), tempBuf.size());
+                        meui_buff_len += tempBuf.size();
+                        mecs_databuffer[meui_buff_len] = '\0'; // maintain null termination
+
+                        if (meui_buff_len >= mei_bundilSizeKb * 1000 || tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+                        {
+                            if (consol_e)
+                                std::cout << mecs_databuffer;
+                            if (file_e)
+                            {
+                                meC_current_file << mecs_databuffer;
+                                meC_current_file.flush();
+                                meul_curentFileSize += meui_buff_len;
+                            }
+                            met_CashInitialTime = tl_currentTime;
+                            meui_buff_len = 0;
+                            memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
+                        }
+                    }
+                    else
+                    {
+                        if (consol_e)
+                            std::cout << logbuff.str();
+                        if (file_e)
+                        {
+                            meC_current_file << logbuff.str();
+                            if (tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+                            {
+                                meC_current_file.flush();
+                                met_CashInitialTime = tl_currentTime;
+                            }
+
+                            meul_curentFileSize += logbuff.str().length();
+                        }
+                    }
+
                     if (file_e)
                     {
                         // std::cout << "Write file " << std::endl;
-                        current_file << logbuff.str();
-                        current_file.flush();
-                        time_t current_time = time(0);
-                        if (maxFileSizeMB)
+
+                        // time_t current_time = time(0);
+                        if (mei_maxFileSizeMB)
                         {
-                            // std::cout << "file size : " << curentFileSize << std::endl;
-                            curentFileSize += logbuff.str().length();
-                            if (maxFileSizeMB * 1024 * 1024 <= curentFileSize)
+                            // std::cout << "file size : " << meul_curentFileSize << std::endl;
+
+                            if (mei_maxFileSizeMB * 1024 * 1024 <= meul_curentFileSize)
                             {
-                                curentFileSize = 0;
-                                current_file.close();
+                                meul_curentFileSize = 0;
+                                meC_current_file.close();
                                 isActiveFile = false;
-                                lastTime = current_time;
+                                met_initialTime = tl_currentTime;
                             }
                         }
-                        // std::cout << "last - curr : " << current_time - lastTime << std::endl;
-                        if (current_time - lastTime > fileGenPeriodMin * 60)
+                        // std::cout << "last - curr : " << current_time - met_initialTime << std::endl;
+                        if (tl_currentTime - met_initialTime > mei_fileGenPeriodMin * 60)
                         {
-                            curentFileSize = 0;
-                            current_file.close();
+                            meul_curentFileSize = 0;
+                            meC_current_file.close();
                             isActiveFile = false;
-                            lastTime = current_time;
+                            met_initialTime = tl_currentTime;
                         }
                     }
-                }
-                else
-                {
-                    std::cout << "Faild to open log file " << std::endl;
+                    else
+                    {
+                        std::cout << "Faild to open log file " << std::endl;
+                    }
                 }
             }
         }
     }
 }
 
-std::shared_ptr<Logger> Logger::getInstance()
+Logger &Logger::getInstance()
 {
-    std::lock_guard<std::mutex> lg(mtx);
-    if (!instance)
-    {
-        instance = std::shared_ptr<Logger>(new Logger());
-    }
+    static Logger instance;
     return instance;
-    // thread-safe (C++11+)
-    // return instance;
 }
