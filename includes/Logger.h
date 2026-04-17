@@ -9,60 +9,73 @@
 #include <iomanip>
 #include <memory>
 
+#define MAX_SIZE_BUFF 1000 * 200
 class Logger
 {
 private:
-    int loglevel;
+    static int mei_logLevel;
+    static std::string mes_appName;
+    static std::string mes_filePath;
+    static int mei_maxFileSizeMB;
+    static int mei_fileGenPeriodMin;
+    static bool meb_isCashEnable;
 
-    std::string appName;
-    std::string path;
-    int maxFileSizeMB;
-    unsigned long long curentFileSize;
-    int fileGenPeriodMin;
+    unsigned long long meul_curentFileSize;
 
-    static std::mutex mtx;
-    std::mutex time_mx;
-    std::ofstream current_file;
-    static std::shared_ptr<Logger> instance;
+    int mei_bundilSizeKb;
+    int mei_CashTimeLimitSec;
+    char mecs_databuffer[MAX_SIZE_BUFF];
+    unsigned int meui_buff_len;
+
+    time_t met_CashInitialTime;
+    static std::mutex memutexS_mu;
+    std::ofstream meC_current_file;
+    // static std::shared_ptr<Logger> meCS_instance;
     bool isActiveFile;
     void mefn_getCurrentTime(std::string &date, std::string &timeStr);
     std::string mefn_getCurrentTime();
     std::string mefn_getLogType(LogLevel LOG_LEVEL);
-    time_t lastTime;
+    time_t met_initialTime;
     Logger();
 
-    // static Logger instance;
+    // static Logger meCS_instance;
 
 public:
     ~Logger();
-    void setLogLevel(int level);
-    void setAppName(std::string appname);
-    void setLogPath(std::string logPath);
-    void setMaxFileSizeMB(int level);
-    void setMaxFileGenPeriodMin(int per);
+    static void setLogLevel(int level);
+    static void setAppName(std::string appname);
+    static void setLogPath(std::string logPath);
+    static void setMaxFileSizeMB(int level);
+    static void setMaxFileGenPeriodMin(int per);
+    static void desableCash();
     void write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg);
-    static std::shared_ptr<Logger> getInstance();
+    // static std::shared_ptr<Logger> getInstance();
+    static Logger &getInstance();
 };
+inline void Logger::desableCash()
+{
+    meb_isCashEnable = false;
+}
 inline void Logger::setMaxFileGenPeriodMin(int per)
 {
-    fileGenPeriodMin = per;
+    mei_fileGenPeriodMin = per;
 }
 inline void Logger::setMaxFileSizeMB(int size)
 {
-    maxFileSizeMB = size;
+    mei_maxFileSizeMB = size;
 }
 inline void Logger::setLogLevel(int level)
 {
-    loglevel = level;
+    mei_logLevel = level;
 }
 inline void Logger::setAppName(std::string appname)
 {
-    appName = appname;
+    mes_appName = appname;
 }
 
 inline void Logger::setLogPath(std::string logPath)
 {
-    path = logPath;
+    mes_filePath = logPath;
 }
 #define log_error LogStream(__FILE__, __LINE__, LogLevel::Error)
 #define log_verbose LogStream(__FILE__, __LINE__, LogLevel::Verbose)
