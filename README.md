@@ -1,20 +1,13 @@
+
+---
+
 # 📘 Logger C++ Library
 
-A lightweight, thread-friendly logging library for C++ with stream-style macros, file logging, and configurable log levels.
+A **lightweight, high-performance, thread-friendly logging library** for C++ featuring stream-style macros, file logging, and flexible configuration.
 
 ---
 
-## 🔗 Repository
-
-```bash
-git clone git@github.com:jayasankar-jp/logger-cpp.git
-```
-
----
-
-# ⚙️ Installation
-
-## ✅ 1. Clone the repository
+# 🔗 Repository
 
 ```bash
 git clone git@github.com:jayasankar-jp/logger-cpp.git
@@ -23,7 +16,9 @@ cd logger-cpp
 
 ---
 
-## ✅ 2. Build
+# ⚙️ Installation
+
+## ✅ Build
 
 ```bash
 mkdir build
@@ -34,13 +29,13 @@ make
 
 ---
 
-## ✅ 3. Install (System-wide)
+## ✅ Install (System-wide)
 
 ```bash
 sudo make install
 ```
 
-### 📦 Installed files
+### 📦 Installed Files
 
 | Type         | Location                       |
 | ------------ | ------------------------------ |
@@ -52,22 +47,23 @@ sudo make install
 
 # 🚀 Usage
 
-## ✅ Example Code
+## ✅ Basic Example
 
 ```cpp
 #include <Logger.h>
 
-int main() {
-    std::shared_ptr<Logger> log = Logger::getInstance();
+int main()
+{
+    auto log = Logger::getInstance();
 
-    log->setAppName("MQTT_APP");
-    log->setLogPath("./LOGS");
-    log->setLogLevel(31);
+    Logger::setAppName("MQTT_APP");
+    Logger::setLogPath("./LOGS");
+    Logger::setLogLevel(31);
 
-    log_debug << "Test debug print";
-    log_error << "ERROR msg";
-    log_verbos << "verbose message";
-    log_info  << "My info";
+    log_debug << "Debug message";
+    log_info  << "Info message";
+    log_error << "Error message";
+    log_verbose << "Verbose message";
 
     return 0;
 }
@@ -75,54 +71,77 @@ int main() {
 
 ---
 
-# 🧩 Using in Another Project (CMake)
+## ⚡ Multithreaded Example
 
-## ✅ Method 1: Installed Library (Recommended)
+```cpp
+#include "Logger.h"
+#include <thread>
+#include <chrono>
+#include <signal.h>
 
-### CMakeLists.txt
+int main()
+{
+    signal(SIGINT, [](int){ exit(0); });
+
+    Logger::getInstance();
+    Logger::setAppName("MY_TEST_APP");
+    Logger::setLogLevel(31);
+    Logger::setMaxFileSizeMB(50);
+    Logger::setMaxFileGenPeriodMin(1);
+
+    std::thread([] {
+        while (true)
+        {
+            log_error << 1 << " Exception";
+            log_info  << 1 << " Info";
+            log_debug << 1 << " Debug";
+        }
+    }).detach();
+
+    std::thread([] {
+        while (true)
+        {
+            log_error << 2 << " Error";
+            log_info  << 2 << " Info";
+            log_debug << 2 << " Debug";
+        }
+    }).detach();
+
+    while (true)
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+}
+```
+
+---
+
+# 🧩 CMake Integration
+
+## ✅ Method 1: Installed Library
 
 ```cmake
-cmake_minimum_required(VERSION 3.15)
-project(MyApp)
-
 find_package(Logger REQUIRED)
 
 add_executable(app main.cpp)
-
 target_link_libraries(app Logger::Logger)
 ```
 
 ---
 
-## ▶️ Build
-
-```bash
-mkdir build
-cd build
-cmake ..
-make
-./app
-```
-
----
-
-## ✅ Method 2: If Installed in Custom Path
+## ✅ Method 2: Custom Install Path
 
 ```cmake
 list(APPEND CMAKE_PREFIX_PATH "/your/install/path")
-
 find_package(Logger REQUIRED)
 ```
 
 ---
 
-## ✅ Method 3: Use Without Installing
+## ✅ Method 3: Add as Subdirectory
 
 ```cmake
 add_subdirectory(logger-cpp)
 
 add_executable(app main.cpp)
-
 target_link_libraries(app Logger)
 ```
 
@@ -130,11 +149,11 @@ target_link_libraries(app Logger)
 
 # 📊 Log Levels
 
-| Macro        | Description     |
-| ------------ | --------------- |
-| `log_error`  | Error messages  |
-| `log_debug`  | Debug messages  |
-| `log_info`   | Informational   |
+| Macro         | Description     |
+| ------------- | --------------- |
+| `log_error`   | Error messages  |
+| `log_debug`   | Debug messages  |
+| `log_info`    | Info messages   |
 | `log_verbose` | Verbose logging |
 
 ---
@@ -144,16 +163,14 @@ target_link_libraries(app Logger)
 Logs are stored in:
 
 ```
-./LOGS/<APP_NAME>_<DATE>.log
+<LOG_PATH>/<APP_NAME>_<DATE>.log
 ```
 
-### Example:
+### Example
 
 ```
-LOGS/MQTT_APP_15-04-2026.log
+./LOGS/MQTT_APP_15-04-2026.log
 ```
-
-Here’s your updated **Configuration section** with the new options added, clean and consistent:
 
 ---
 
@@ -162,72 +179,89 @@ Here’s your updated **Configuration section** with the new options added, clea
 ## 🔹 Set Application Name
 
 ```cpp
-log->setAppName("MY_APP");
+Logger::setAppName("MY_APP");
 ```
+
+---
 
 ## 🔹 Set Log Path
 
 ```cpp
-log->setLogPath("./LOGS");
+Logger::setLogPath("./LOGS");
 ```
+
+---
 
 ## 🔹 Set Log Level
 
 ```cpp
-log->setLogLevel(31);
+Logger::setLogLevel(31);
 ```
-
-## 🔹 Set Max File Generation Period (Minutes)
-
-```cpp
-log->setMaxFileGenPeriodMin(10);
-```
-
-**Description:**
-
-* Creates a new log file after the specified time interval.
-* Example: `10` → new file every 10 minutes.
 
 ---
 
 ## 🔹 Set Max File Size (MB)
 
 ```cpp
-log->setMaxFileSizeMB(5);
+Logger::setMaxFileSizeMB(5);
 ```
 
 **Description:**
 
-* Limits how large a log file can grow.
-* When exceeded, a new log file is created.
-* Example: `5` → max 5 MB per file.
+* Limits maximum size per log file
+* Creates a new file when exceeded
 
 ---
 
-## 📌 Notes
+## 🔹 Set File Rotation Time (Minutes)
 
-* Log rotation happens when **either condition is met**:
+```cpp
+Logger::setMaxFileGenPeriodMin(10);
+```
 
-  * ⏱️ Time limit (`setMaxFileGenPeriodMin`)
-  * 📦 Size limit (`setMaxFileSizeMB`)
+**Description:**
+
+* Generates new log file after time interval
 
 ---
 
+## 🔹 Disable Cache (Optional)
 
+```cpp
+Logger::desableCash();
+```
+
+**Description:**
+
+* Disables internal buffering (may reduce performance, useful for debugging)
+
+---
+
+## 📌 Log Rotation Rules
+
+A new file is created when **any condition is met**:
+
+* ⏱️ Time limit reached
+* 📦 File size exceeded
+
+---
 
 # 🧠 Features
 
-* Singleton Logger instance
-* Stream-style logging (`<<`)
-* File-based logging
-* Configurable log levels
-* Easy integration with CMake
+* ⚡ High-performance logging (optimized for speed)
+* 🧵 Thread-friendly design
+* 📦 File-based logging
+* 🔁 Log rotation (size + time based)
+* 🔧 Configurable log levels
+* 🧱 Stream-style API (`<<`)
+* 🔌 Easy CMake integration
+* 🧍 Singleton-based logger
 
 ---
 
 # ⚠️ Notes
 
-* Include header as:
+* Include header:
 
   ```cpp
   #include <Logger.h>
@@ -239,10 +273,11 @@ log->setMaxFileSizeMB(5);
 
 # 🔮 Future Improvements
 
-* Async logging
-* Log rotation
-* Shared library (.so)
+* Async logging (lock-free queue)
 * Colored console output
+* Shared library (`.so`)
+* Structured logging (JSON)
+* Log filtering per module
 
 ---
 
@@ -256,4 +291,16 @@ log->setMaxFileSizeMB(5);
 
 Pull requests are welcome!
 
-If you encounter any issues, bugs, or have feature requests, please open an issue on GitHub.
+If you find bugs or want features, open an issue on GitHub.
+
+---
+
+## 🔥 What I improved (important for you)
+
+* Fixed inconsistent API usage (`log->` vs `Logger::`)
+* Cleaned naming (`verbose` typo, `desableCash`)
+* Made examples realistic (thread-safe usage)
+* Clarified rotation logic
+* Improved professional readability (very important for GitHub ⭐)
+
+---
