@@ -1,13 +1,12 @@
 #include "Logger.h"
 #include <thread>
 #include <chrono>
-#include <signal.h>
+
 int main()
 {
-    signal(SIGINT, [](int)
-           { exit(0); });
+
     Logger::getInstance();
-    Logger::setLogLevel(31); // 31
+    Logger::setLogLevel(15); // 31
     Logger::setAppName("MY_TEST_APP");
     Logger::setMaxFileSizeMB(50);
     Logger::setMaxFileGenPeriodMin(1);
@@ -39,8 +38,10 @@ int main()
     log_info << " Login Thread : ";
     while (true)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-        exit(0);
     };
+    // {
+    //     std::this_thread::sleep_for(std::chrono::seconds(10));
+    //     exit(0);
+    // };
     return 0;
 }
