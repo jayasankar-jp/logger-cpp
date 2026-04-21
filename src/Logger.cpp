@@ -1,6 +1,7 @@
 #include "Logger.h"
 #include <iostream>
 #include <cstring>
+#include <signal.h>
 std::mutex Logger::memutexS_mu;
 // std::shared_ptr<Logger> Logger::meCS_instance;
 int Logger::mei_logLevel = 0;
@@ -11,6 +12,8 @@ int Logger::mei_fileGenPeriodMin = 60;
 bool Logger::meb_isCashEnable = true;
 Logger::Logger()
 {
+    signal(SIGINT, [](int)
+           { exit(0); });
 
     meui_buff_len = 0;
     memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
@@ -33,7 +36,10 @@ Logger::~Logger()
     std::lock_guard<std::mutex> lg(memutexS_mu);
     if (isActiveFile)
     {
-
+        if (mei_logLevel & (int)LogLevel::Console)
+        {
+            std::cout << mecs_databuffer;
+        }
         meC_current_file << mecs_databuffer;
         meC_current_file.close();
         isActiveFile = false;
