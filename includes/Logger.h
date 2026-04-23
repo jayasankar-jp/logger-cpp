@@ -4,6 +4,12 @@
 #include "LogStream.h"
 #include <fstream>
 #include <mutex>
+#ifdef _WIN32
+#include <cstdlib>
+
+#else
+#include <unistd.h>
+#endif
 #include <ctime>
 #include <sstream>
 #include <iomanip>

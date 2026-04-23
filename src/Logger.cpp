@@ -26,8 +26,13 @@ Logger::Logger()
     // mei_maxFileSizeMB = 50;
     meul_curentFileSize = 0;
 
+#ifdef _WIN32
+    _putenv_s("TZ", "India Standard Time");
+    _tzset();
+#else
     setenv("TZ", "Asia/Kolkata", 1);
     tzset();
+#endif
     isActiveFile = false;
 }
 Logger::~Logger()
@@ -50,7 +55,12 @@ void Logger::mefn_getCurrentTime(std::string &date, std::string &timeStr)
     time_t now = time(nullptr);
 
     tm ltm;
+
+#ifdef _WIN32
+    localtime_s(&ltm, &now);
+#else
     localtime_r(&now, &ltm);
+#endif
 
     // Pre-size strings (avoid realloc + strlen)
     date.resize(10);   // "DD-MM-YYYY"
@@ -94,7 +104,12 @@ std::string Logger::mefn_getCurrentTime()
     time_t now = time(nullptr);
 
     tm ltm;
+
+#ifdef _WIN32
+    localtime_s(&ltm, &now);
+#else
     localtime_r(&now, &ltm);
+#endif
 
     char buf[32]; // exact size needed
 
