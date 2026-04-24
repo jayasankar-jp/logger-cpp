@@ -2,18 +2,27 @@
 #include <iostream>
 #include <cstring>
 #include <signal.h>
+#include <thread>
 std::mutex Logger::memutexS_mu;
+std::mutex Logger::me_QueueMutex;
 // std::shared_ptr<Logger> Logger::meCS_instance;
 int Logger::mei_logLevel = 0;
 std::string Logger::mes_appName = "APP";
 std::string Logger::mes_filePath = "./LOGS";
+// Queue<std::pair<bool, std::string>> Logger::meC_logQueue;
 int Logger::mei_maxFileSizeMB = 50;
 int Logger::mei_fileGenPeriodMin = 60;
 bool Logger::meb_isCashEnable = true;
+bool Logger::mei_isShoutDown = 0;
+std::condition_variable Logger::mec_Queue_cv;
+Queue<std::pair<bool, std::string>> Logger::meC_logQueue;
 Logger::Logger()
 {
+    mei_isShoutDown = 0;
     signal(SIGINT, [](int)
-           { exit(0); });
+           {
+           Logger::mei_isShoutDown=1;
+             exit(0); });
 
     meui_buff_len = 0;
     memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
@@ -34,7 +43,10 @@ Logger::Logger()
     tzset();
 #endif
     isActiveFile = false;
+
+    std::thread(&Logger::fileWriter, this).detach();
 }
+
 Logger::~Logger()
 {
     // std::cout << "Distructor call";
@@ -153,130 +165,397 @@ std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
     switch (LOG_LEVEL)
     {
     case LogLevel::Error:
-        return "[error]";
+        return "[-ER-]";
     case LogLevel::Info:
-        return "[info]";
+        return "[-IN-]";
+    case LogLevel::Warn:
+        return "[-WR-]";
     case LogLevel::Verbose:
-        return "[verbose]";
+        return "[-VB-]";
+    case LogLevel::Critical:
+        return "[-CR-]";
     case LogLevel::Debug:
-        return "[debug]";
+        return "[-DB-]";
     }
     return "";
 }
+// void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg)
+// {
+//     // std::cout << file << std::endl;
+//     if (mei_logLevel > 0)
+//     {
+//         std::lock_guard<std::mutex> lg(memutexS_mu);
+//         if (!isActiveFile)
+//         {
+//             try
+//             {
+//                 std::string date, Time;
+//                 met_initialTime = time(0);
+
+//                 mefn_getCurrentTime(date, Time);
+//                 std::string file_name = mes_filePath + "/" + mes_appName + "_" + date + "_" + Time + ".log";
+//                 meC_current_file.open(file_name, std::ios::out | std::ios::binary);
+//                 isActiveFile = true;
+//             }
+//             catch (const std::exception &e)
+//             {
+//                 std::cerr << e.what() << '\n';
+//             }
+//         }
+//         if (isActiveFile)
+//         {
+
+//             if (mei_logLevel & (int)LOG_LEVEL)
+//             {
+//                 bool consol_e = mei_logLevel & (int)LogLevel::Console;
+//                 bool file_e = meC_current_file.is_open();
+//                 std::stringstream logbuff;
+//                 time_t tl_currentTime = time(0);
+//                 if (consol_e || file_e)
+//                 {
+//                     logbuff << "[" << mes_appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
+//                     if (meb_isCashEnable)
+//                     {
+
+//                         std::string tempBuf = logbuff.str();
+
+//                         // strcat(mecs_databuffer, tempBuf.c_str());
+//                         // meui_buff_len += tempBuf.length();
+//                         memcpy(mecs_databuffer + meui_buff_len, tempBuf.data(), tempBuf.size());
+//                         meui_buff_len += tempBuf.size();
+//                         mecs_databuffer[meui_buff_len] = '\0'; // maintain null termination
+
+//                         if (meui_buff_len >= mei_bundilSizeKb * 1000 || tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+//                         {
+//                             if (consol_e)
+//                                 std::cout << mecs_databuffer;
+//                             if (file_e)
+//                             {
+//                                 meC_current_file << mecs_databuffer;
+//                                 meC_current_file.flush();
+//                                 meul_curentFileSize += meui_buff_len;
+//                             }
+//                             met_CashInitialTime = tl_currentTime;
+//                             meui_buff_len = 0;
+//                             memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
+//                         }
+//                     }
+//                     else
+//                     {
+//                         if (consol_e)
+//                             std::cout << logbuff.str();
+//                         if (file_e)
+//                         {
+//                             meC_current_file << logbuff.str();
+//                             if (tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+//                             {
+//                                 meC_current_file.flush();
+//                                 met_CashInitialTime = tl_currentTime;
+//                             }
+
+//                             meul_curentFileSize += logbuff.str().length();
+//                         }
+//                     }
+
+//                     if (file_e)
+//                     {
+//                         // std::cout << "Write file " << std::endl;
+
+//                         // time_t current_time = time(0);
+//                         if (mei_maxFileSizeMB)
+//                         {
+//                             // std::cout << "file size : " << meul_curentFileSize << std::endl;
+
+//                             if (mei_maxFileSizeMB * 1024 * 1024 <= meul_curentFileSize)
+//                             {
+//                                 meul_curentFileSize = 0;
+//                                 meC_current_file.close();
+//                                 isActiveFile = false;
+//                                 met_initialTime = tl_currentTime;
+//                             }
+//                         }
+//                         // std::cout << "last - curr : " << current_time - met_initialTime << std::endl;
+//                         if (tl_currentTime - met_initialTime > mei_fileGenPeriodMin * 60)
+//                         {
+//                             meul_curentFileSize = 0;
+//                             meC_current_file.close();
+//                             isActiveFile = false;
+//                             met_initialTime = tl_currentTime;
+//                         }
+//                     }
+//                     else
+//                     {
+//                         std::cout << "Faild to open log file " << std::endl;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+// }
+
 void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg)
 {
     // std::cout << file << std::endl;
     if (mei_logLevel > 0)
     {
         std::lock_guard<std::mutex> lg(memutexS_mu);
-        if (!isActiveFile)
+
+        if (mei_logLevel & (int)LOG_LEVEL)
         {
-            try
+            bool consol_e = mei_logLevel & (int)LogLevel::Console;
+
+            // std::stringstream logbuff;
+            time_t tl_currentTime = time(0);
+
+            // logbuff << "[" << mes_appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
+            bool console_e = mei_logLevel & (int)LogLevel::Console;
+
+            std::string logbuff;
+            logbuff.reserve(256);
+
+            logbuff += "[";
+            logbuff += mes_appName;
+            logbuff += "]";
+            logbuff += mefn_getCurrentTime();
+            logbuff += mefn_getLogType(LOG_LEVEL);
+            logbuff += "[";
+            logbuff += file;
+            logbuff += ":";
+            logbuff += std::to_string(line);
+            logbuff += "][";
+            logbuff += msg;
+            logbuff += "]\n";
             {
-                std::string date, Time;
-                met_initialTime = time(0);
-
-                mefn_getCurrentTime(date, Time);
-                std::string file_name = mes_filePath + "/" + mes_appName + "_" + date + "_" + Time + ".log";
-                meC_current_file.open(file_name, std::ios::app);
-                isActiveFile = true;
+                std::lock_guard<std::mutex> lg(me_QueueMutex);
+                meC_logQueue.insert({console_e, std::move(logbuff)});
             }
-            catch (const std::exception &e)
-            {
-                std::cerr << e.what() << '\n';
-            }
-        }
-        if (isActiveFile)
-        {
+            mec_Queue_cv.notify_one();
+            // if (meb_isCashEnable)
+            // {
 
-            if (mei_logLevel & (int)LOG_LEVEL)
-            {
-                bool consol_e = mei_logLevel & (int)LogLevel::Console;
-                bool file_e = meC_current_file.is_open();
-                std::stringstream logbuff;
-                time_t tl_currentTime = time(0);
-                if (consol_e || file_e)
-                {
-                    logbuff << "[" << mes_appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
-                    if (meb_isCashEnable)
-                    {
+            //     std::string tempBuf = logbuff.str();
 
-                        std::string tempBuf = logbuff.str();
+            //     // strcat(mecs_databuffer, tempBuf.c_str());
+            //     // meui_buff_len += tempBuf.length();
+            //     memcpy(mecs_databuffer + meui_buff_len, tempBuf.data(), tempBuf.size());
+            //     meui_buff_len += tempBuf.size();
+            //     mecs_databuffer[meui_buff_len] = '\0'; // maintain null termination
 
-                        // strcat(mecs_databuffer, tempBuf.c_str());
-                        // meui_buff_len += tempBuf.length();
-                        memcpy(mecs_databuffer + meui_buff_len, tempBuf.data(), tempBuf.size());
-                        meui_buff_len += tempBuf.size();
-                        mecs_databuffer[meui_buff_len] = '\0'; // maintain null termination
+            //     if (meui_buff_len >= mei_bundilSizeKb * 1000 || tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+            //     {
+            //         if (consol_e)
+            //             std::cout << mecs_databuffer;
+            //         // if (file_e)
+            //         // {
+            //         //     meC_current_file << mecs_databuffer;
+            //         //     meC_current_file.flush();
+            //         //     meul_curentFileSize += meui_buff_len;
+            //         // }
+            //         met_CashInitialTime = tl_currentTime;
+            //         meui_buff_len = 0;
+            //         memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
+            //     }
+            // }
+            // else
+            // {
+            //     if (consol_e)
+            //         std::cout << logbuff.str();
+            //     if (file_e)
+            //     {
+            //         meC_current_file << logbuff.str();
+            //         if (tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
+            //         {
+            //             meC_current_file.flush();
+            //             met_CashInitialTime = tl_currentTime;
+            //         }
 
-                        if (meui_buff_len >= mei_bundilSizeKb * 1000 || tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
-                        {
-                            if (consol_e)
-                                std::cout << mecs_databuffer;
-                            if (file_e)
-                            {
-                                meC_current_file << mecs_databuffer;
-                                meC_current_file.flush();
-                                meul_curentFileSize += meui_buff_len;
-                            }
-                            met_CashInitialTime = tl_currentTime;
-                            meui_buff_len = 0;
-                            memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
-                        }
-                    }
-                    else
-                    {
-                        if (consol_e)
-                            std::cout << logbuff.str();
-                        if (file_e)
-                        {
-                            meC_current_file << logbuff.str();
-                            if (tl_currentTime - met_CashInitialTime > mei_CashTimeLimitSec)
-                            {
-                                meC_current_file.flush();
-                                met_CashInitialTime = tl_currentTime;
-                            }
+            //         meul_curentFileSize += logbuff.str().length();
+            //     }
+            // }
 
-                            meul_curentFileSize += logbuff.str().length();
-                        }
-                    }
+            // if (file_e)
+            // {
+            //     // std::cout << "Write file " << std::endl;
 
-                    if (file_e)
-                    {
-                        // std::cout << "Write file " << std::endl;
+            //     // time_t current_time = time(0);
+            //     if (mei_maxFileSizeMB)
+            //     {
+            //         // std::cout << "file size : " << meul_curentFileSize << std::endl;
 
-                        // time_t current_time = time(0);
-                        if (mei_maxFileSizeMB)
-                        {
-                            // std::cout << "file size : " << meul_curentFileSize << std::endl;
-
-                            if (mei_maxFileSizeMB * 1024 * 1024 <= meul_curentFileSize)
-                            {
-                                meul_curentFileSize = 0;
-                                meC_current_file.close();
-                                isActiveFile = false;
-                                met_initialTime = tl_currentTime;
-                            }
-                        }
-                        // std::cout << "last - curr : " << current_time - met_initialTime << std::endl;
-                        if (tl_currentTime - met_initialTime > mei_fileGenPeriodMin * 60)
-                        {
-                            meul_curentFileSize = 0;
-                            meC_current_file.close();
-                            isActiveFile = false;
-                            met_initialTime = tl_currentTime;
-                        }
-                    }
-                    else
-                    {
-                        std::cout << "Faild to open log file " << std::endl;
-                    }
-                }
-            }
+            //         if (mei_maxFileSizeMB * 1024 * 1024 <= meul_curentFileSize)
+            //         {
+            //             meul_curentFileSize = 0;
+            //             meC_current_file.close();
+            //             isActiveFile = false;
+            //             met_initialTime = tl_currentTime;
+            //         }
+            //     }
+            //     // std::cout << "last - curr : " << current_time - met_initialTime << std::endl;
+            //     if (tl_currentTime - met_initialTime > mei_fileGenPeriodMin * 60)
+            //     {
+            //         meul_curentFileSize = 0;
+            //         meC_current_file.close();
+            //         isActiveFile = false;
+            //         met_initialTime = tl_currentTime;
+            //     }
+            // }
+            // else
+            // {
+            //     std::cout << "Faild to open log file " << std::endl;
+            // }
         }
     }
 }
+void Logger::mefn_generatefile()
+{
 
+    try
+    {
+        std::string date, Time;
+        met_initialTime = time(0);
+
+        mefn_getCurrentTime(date, Time);
+        std::string file_name;
+        file_name.reserve(60);
+
+        file_name.append(mes_filePath);
+        file_name.push_back('/');
+        file_name.append(mes_appName);
+        file_name.push_back('_');
+        file_name.append(date);
+        file_name.push_back('_');
+        file_name.append(Time);
+        file_name.append(".log");
+        meC_current_file.open(file_name, std::ios::out | std::ios::binary);
+        isActiveFile = true;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+}
+void Logger::fileWriter()
+{
+    // std::lock_guard<std::mutex> lg(memutexS_mu);
+
+    while (!mei_isShoutDown)
+    {
+        bool isTimeOut = false;
+        std::string msg_data;
+        size_t mesg_len;
+        std::pair<bool, std::string> cl_pair;
+        std::unique_lock<std::mutex> ul(me_QueueMutex);
+        mec_Queue_cv.wait_for(ul, std::chrono::seconds(mei_CashTimeLimitSec), [this]
+                              { return meC_logQueue.getCount() > 0 || mei_isShoutDown; });
+        time_t tL_currentTime = time(0);
+        if (meC_logQueue.getElement(cl_pair))
+        {
+
+            msg_data = cl_pair.second;
+            mesg_len = msg_data.length();
+            if (cl_pair.first)
+            {
+                std::cout << msg_data;
+            }
+            if (meb_isCashEnable)
+            {
+                memcpy(mecs_databuffer + meui_buff_len, msg_data.c_str(), mesg_len);
+                meui_buff_len += mesg_len;
+                mecs_databuffer[meui_buff_len] = '\0';
+            }
+        }
+        else
+        {
+            isTimeOut = true;
+            std::cout << "timeout happen";
+        }
+        if (meb_isCashEnable)
+        {
+            if (meui_buff_len >= mei_bundilSizeKb)
+            {
+
+                if (!isActiveFile)
+                {
+                    mefn_generatefile();
+                }
+                if (meC_current_file.is_open())
+                {
+                    if (meul_curentFileSize + meui_buff_len >= mei_maxFileSizeMB * 1024 * 1024)
+                    {
+                        meC_current_file.close();
+                        meul_curentFileSize = 0;
+                        mefn_generatefile();
+                        if (meC_current_file.is_open())
+                        {
+                            meC_current_file << mecs_databuffer;
+                            meul_curentFileSize += meui_buff_len;
+                            meui_buff_len = 0;
+                        }
+                    }
+                    else
+                    {
+                        meC_current_file << mecs_databuffer;
+                        meul_curentFileSize += meui_buff_len;
+                        meui_buff_len = 0;
+                        meC_current_file.flush();
+                        // met_initialTime = tL_currentTime;
+                    }
+                    if (isTimeOut)
+                    {
+                        meC_current_file.flush();
+                        // met_initialTime = tL_currentTime;
+                        std::cout << "timeout flush";
+                    }
+                }
+            }
+            // if(meul_curentFileSize+)
+            // if(meul_curentFileSize+mei_bundilSizeKb)
+            // if (meui_buff_len + mei_bundilSizeKb)
+        }
+        else
+        {
+            if (!isActiveFile)
+            {
+                mefn_generatefile();
+            }
+            if (meC_current_file.is_open())
+            {
+                if (meul_curentFileSize + mesg_len <= mei_maxFileSizeMB * 1024 * 1024)
+                {
+                    meC_current_file << msg_data;
+                    meul_curentFileSize += mesg_len;
+                }
+                else
+                {
+                    meC_current_file.close();
+                    meul_curentFileSize = 0;
+                    mefn_generatefile();
+                    if (meC_current_file.is_open())
+                    {
+                        meC_current_file << msg_data;
+                        meul_curentFileSize += mesg_len;
+                    }
+                }
+                if (isTimeOut)
+                {
+                    meC_current_file.flush();
+                    // met_initialTime = tL_currentTime;
+                    std::cout << "timeout flush";
+                }
+            }
+            else
+            {
+                std::cerr << "Faild to open file";
+            }
+        }
+        if (isActiveFile && meC_current_file.is_open() && (tL_currentTime - met_initialTime > mei_fileGenPeriodMin * 60))
+        {
+            meC_current_file.close();
+            meul_curentFileSize = 0;
+            isActiveFile = 0;
+        }
+    }
+}
 Logger &Logger::getInstance()
 {
     static Logger instance;

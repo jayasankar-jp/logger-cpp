@@ -6,7 +6,7 @@ int main()
 {
 
     Logger::getInstance();
-    Logger::setLogLevel(15); // 31
+    Logger::setLogLevel(63); // 127-64
     Logger::setAppName("MY_TEST_APP");
     Logger::setMaxFileSizeMB(50);
     Logger::setMaxFileGenPeriodMin(1);
@@ -37,11 +37,11 @@ int main()
         .detach();
     log_info << " Login Thread : ";
     while (true)
-    {
-    };
     // {
-    //     std::this_thread::sleep_for(std::chrono::seconds(10));
-    //     exit(0);
     // };
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+        exit(0);
+    };
     return 0;
 }
