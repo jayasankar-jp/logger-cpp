@@ -14,8 +14,9 @@
 #include <sstream>
 #include <iomanip>
 #include <memory>
-#define MAX_SIZE_BUFF 1000 * 200
+#define MAX_SIZE_BUFF 1025 * 512
 #include <Queue.h>
+#include <thread>
 class Logger
 {
 private:
@@ -25,7 +26,7 @@ private:
     static int mei_maxFileSizeMB;
     static int mei_fileGenPeriodMin;
     static bool meb_isCashEnable;
-    static Queue<std::pair<bool, std::string>> meC_logQueue;
+    Queue<std::pair<bool, std::string>> meC_logQueue;
 
     unsigned long long meul_curentFileSize;
     int mei_bundilSizeKb;
@@ -33,10 +34,11 @@ private:
     char mecs_databuffer[MAX_SIZE_BUFF];
     static bool mei_isShoutDown;
     unsigned int meui_buff_len;
-
+    std::thread me_writerThread;
     time_t met_CashInitialTime;
-    static std::mutex memutexS_mu, me_QueueMutex;
-    static std::condition_variable mec_Queue_cv;
+    static std::mutex memutexS_mu;
+    std::mutex me_QueueMutex;
+    std::condition_variable mec_Queue_cv;
     std::ofstream meC_current_file;
     // static std::shared_ptr<Logger> meCS_instance;
     bool isActiveFile;
