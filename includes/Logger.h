@@ -37,8 +37,8 @@ private:
     std::thread me_writerThread;
     time_t met_CashInitialTime;
     static std::mutex memutexS_mu;
-    std::mutex me_QueueMutex;
-    std::condition_variable mec_Queue_cv;
+    // std::mutex me_QueueMutex;
+    // std::condition_variable mec_Queue_cv;
     std::ofstream meC_current_file;
     // static std::shared_ptr<Logger> meCS_instance;
     bool isActiveFile;
