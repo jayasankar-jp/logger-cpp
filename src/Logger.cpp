@@ -309,7 +309,7 @@ void Logger::fileWriter()
             break;
         }
 
-        resQue = meC_logQueue.getElement(cl_pair);
+        resQue = meC_logQueue.getElement(cl_pair, 2000);
         // std::cout << "After waiting" << std::endl;
         if (tL_currentTime - met_CashInitialTime >= mei_CashTimeLimitSec)
         {
