@@ -1,9 +1,6 @@
-
----
-
 # 📘 Logger C++ Library
 
-A **lightweight, high-performance, thread-friendly logging library** for C++ featuring stream-style macros, file logging, and flexible configuration.
+A **lightweight, high-performance, thread-friendly logging library** for C++ with stream-style macros, automatic file rotation, configurable log levels, console output, and easy CMake integration.
 
 ---
 
@@ -54,16 +51,17 @@ sudo make install
 
 int main()
 {
-    auto log = Logger::getInstance();
+    Logger::getInstance();
 
     Logger::setAppName("MQTT_APP");
     Logger::setLogPath("./LOGS");
-    Logger::setLogLevel(31);
+    Logger::setLogLevel(127);
 
-    log_debug << "Debug message";
-    log_info  << "Info message";
-    log_error << "Error message";
-    log_verbose << "Verbose message";
+    log_info     << "Application Started";
+    log_error    << "Connection Failed";
+    log_warn     << "Retrying...";
+    log_debug    << "Debug Value = " << 10;
+    log_critical << "Critical Shutdown";
 
     return 0;
 }
@@ -71,90 +69,118 @@ int main()
 
 ---
 
-## ⚡ Multithreaded Example
+# ⚡ Multithreaded Example
 
 ```cpp
-#include "Logger.h"
+#include <Logger.h>
 #include <thread>
 #include <chrono>
-#include <signal.h>
 
 int main()
 {
-    signal(SIGINT, [](int){ exit(0); });
-
     Logger::getInstance();
+
     Logger::setAppName("MY_TEST_APP");
-    Logger::setLogLevel(31);
+    Logger::setLogLevel(127);
     Logger::setMaxFileSizeMB(50);
     Logger::setMaxFileGenPeriodMin(1);
 
-    std::thread([] {
-        while (true)
+    std::thread([]{
+        while(true)
         {
-            log_error << 1 << " Exception";
-            log_info  << 1 << " Info";
-            log_debug << 1 << " Debug";
+            log_info  << "Thread 1 Running";
+            log_debug << "Thread 1 Debug";
         }
     }).detach();
 
-    std::thread([] {
-        while (true)
+    std::thread([]{
+        while(true)
         {
-            log_error << 2 << " Error";
-            log_info  << 2 << " Info";
-            log_debug << 2 << " Debug";
+            log_warn     << "Thread 2 Warning";
+            log_critical << "Thread 2 Critical";
         }
     }).detach();
 
-    while (true)
+    while(true)
         std::this_thread::sleep_for(std::chrono::seconds(10));
 }
 ```
 
 ---
 
-# 🧩 CMake Integration
+# 🧩 Logging Macros
 
-## ✅ Method 1: Installed Library
-
-```cmake
-find_package(Logger REQUIRED)
-
-add_executable(app main.cpp)
-target_link_libraries(app Logger::Logger)
+```cpp
+#define log_error     LogStream(__FILE__, __LINE__, LogLevel::Error)
+#define log_info      LogStream(__FILE__, __LINE__, LogLevel::Info)
+#define log_critical  LogStream(__FILE__, __LINE__, LogLevel::Critical)
+#define log_verbose   LogStream(__FILE__, __LINE__, LogLevel::Verbose)
+#define log_warn      LogStream(__FILE__, __LINE__, LogLevel::Warn)
+#define log_debug     LogStream(__FILE__, __LINE__, LogLevel::Debug)
 ```
 
----
+Each log automatically captures:
 
-## ✅ Method 2: Custom Install Path
-
-```cmake
-list(APPEND CMAKE_PREFIX_PATH "/your/install/path")
-find_package(Logger REQUIRED)
-```
-
----
-
-## ✅ Method 3: Add as Subdirectory
-
-```cmake
-add_subdirectory(logger-cpp)
-
-add_executable(app main.cpp)
-target_link_libraries(app Logger)
-```
+* Source file name
+* Line number
+* Log level
+* Message text
+* Timestamp
 
 ---
 
 # 📊 Log Levels
 
-| Macro         | Description     |
-| ------------- | --------------- |
-| `log_error`   | Error messages  |
-| `log_debug`   | Debug messages  |
-| `log_info`    | Info messages   |
-| `log_verbose` | Verbose logging |
+## Enum Definition
+
+```cpp
+enum class LogLevel
+{
+    Error    = 1 << 0,
+    Info     = 1 << 1,
+    Critical = 1 << 2,
+    Verbose  = 1 << 3,
+    Warn     = 1 << 4,
+    Debug    = 1 << 5,
+    Console  = 1 << 6
+};
+```
+
+---
+
+## Bitmask Values
+
+| Level    | Value |
+| -------- | ----- |
+| Error    | 1     |
+| Info     | 2     |
+| Critical | 4     |
+| Verbose  | 8     |
+| Warn     | 16    |
+| Debug    | 32    |
+| Console  | 64    |
+
+---
+
+## Example Configurations
+
+| Value | Enabled Levels                           |
+| ----- | ---------------------------------------- |
+| 1     | Error                                    |
+| 3     | Error + Info                             |
+| 31    | Error + Info + Critical + Verbose + Warn |
+| 63    | All File Logs                            |
+| 127   | All Logs + Console Output                |
+
+---
+
+## Recommended
+
+```cpp
+Logger::setLogLevel(127);
+```
+
+Enables all logging levels including console output.
 
 ---
 
@@ -162,15 +188,24 @@ target_link_libraries(app Logger)
 
 Logs are stored in:
 
-```
-<LOG_PATH>/<APP_NAME>_<DATE>.log
+```text
+<LOG_PATH>/<APP_NAME>_<DATE>_<TIME>.log
 ```
 
 ### Example
 
+```text
+./LOGS/MY_TEST_APP_27-04-2026_13:20:10.log
 ```
-./LOGS/MQTT_APP_15-04-2026.log
-```
+
+---
+
+# 🔁 Log Rotation Rules
+
+A new file is automatically created when **any condition is met**:
+
+* 📦 Max file size exceeded
+* ⏱️ Rotation time reached
 
 ---
 
@@ -184,7 +219,7 @@ Logger::setAppName("MY_APP");
 
 ---
 
-## 🔹 Set Log Path
+## 🔹 Set Log Directory
 
 ```cpp
 Logger::setLogPath("./LOGS");
@@ -195,89 +230,108 @@ Logger::setLogPath("./LOGS");
 ## 🔹 Set Log Level
 
 ```cpp
-Logger::setLogLevel(31);
+Logger::setLogLevel(127);
 ```
 
 ---
 
-## 🔹 Set Max File Size (MB)
+## 🔹 Set Max File Size
 
 ```cpp
-Logger::setMaxFileSizeMB(5);
+Logger::setMaxFileSizeMB(50);
 ```
-
-**Description:**
-
-* Limits maximum size per log file
-* Creates a new file when exceeded
 
 ---
 
-## 🔹 Set File Rotation Time (Minutes)
+## 🔹 Set Rotation Interval
 
 ```cpp
 Logger::setMaxFileGenPeriodMin(10);
 ```
 
-**Description:**
-
-* Generates new log file after time interval
-
 ---
 
-## 🔹 Disable Cache (Optional)
+## 🔹 Disable Internal Cache
 
 ```cpp
 Logger::desableCash();
 ```
 
-**Description:**
-
-* Disables internal buffering (may reduce performance, useful for debugging)
-
----
-
-## 📌 Log Rotation Rules
-
-A new file is created when **any condition is met**:
-
-* ⏱️ Time limit reached
-* 📦 File size exceeded
+> Useful for debugging or immediate disk writes.
+> May reduce performance.
 
 ---
 
 # 🧠 Features
 
-* ⚡ High-performance logging (optimized for speed)
+* ⚡ High-performance logging
 * 🧵 Thread-friendly design
-* 📦 File-based logging
-* 🔁 Log rotation (size + time based)
-* 🔧 Configurable log levels
+* 📁 File logging
+* 🔁 Automatic rotation (time + size)
+* 🖥️ Optional console output
+* 📍 File & line capture
+* 🔧 Bitmask log control
 * 🧱 Stream-style API (`<<`)
 * 🔌 Easy CMake integration
-* 🧍 Singleton-based logger
+* 🧍 Singleton logger
+
+---
+
+# 🧩 CMake Integration
+
+## Method 1: Installed Library
+
+```cmake
+find_package(Logger REQUIRED)
+
+add_executable(app main.cpp)
+target_link_libraries(app Logger::Logger)
+```
+
+---
+
+## Method 2: Custom Path
+
+```cmake
+list(APPEND CMAKE_PREFIX_PATH "/your/install/path")
+find_package(Logger REQUIRED)
+```
+
+---
+
+## Method 3: Add as Subdirectory
+
+```cmake
+add_subdirectory(logger-cpp)
+
+add_executable(app main.cpp)
+target_link_libraries(app Logger)
+```
 
 ---
 
 # ⚠️ Notes
 
-* Include header:
+* Include:
 
-  ```cpp
-  #include <Logger.h>
-  ```
-* Ensure log directory exists or is creatable
-* Static library (`.a`) by default
+```cpp
+#include <Logger.h>
+```
+
+* Ensure log folder exists or is creatable.
+* Static library (`.a`) by default.
+* Use `127` for full logging.
 
 ---
 
 # 🔮 Future Improvements
 
-* Async logging (lock-free queue)
-* Colored console output
+* Async lock-free queue
 * Shared library (`.so`)
-* Structured logging (JSON)
-* Log filtering per module
+* JSON structured logs
+* Per-module filtering
+* Colored terminal logs
+* Daily compression of old logs
 
 ---
 
@@ -289,18 +343,6 @@ A new file is created when **any condition is met**:
 
 # ⭐ Contributing
 
-Pull requests are welcome!
+Pull requests are welcome.
 
-If you find bugs or want features, open an issue on GitHub.
-
----
-
-## 🔥 What I improved (important for you)
-
-* Fixed inconsistent API usage (`log->` vs `Logger::`)
-* Cleaned naming (`verbose` typo, `desableCash`)
-* Made examples realistic (thread-safe usage)
-* Clarified rotation logic
-* Improved professional readability (very important for GitHub ⭐)
-
----
+If you find bugs or want new features, open an issue in the repository.

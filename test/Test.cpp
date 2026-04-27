@@ -32,6 +32,8 @@ int main()
             log_error << thread_id << " MY test : ";
             log_info << thread_id << " INFO test 2";
             log_debug << thread_id << " MY DEBUG test test test test";
+            log_warn << thread_id << "Warning";
+            log_critical << thread_id << "Critical msg";
             // std::this_thread::sleep_for(std::chrono::nanoseconds(2));
         } })
         .detach();
