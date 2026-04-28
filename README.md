@@ -1,6 +1,6 @@
 # 📘 Logger C++ Library
 
-A **lightweight, high-performance, thread-friendly logging library** for C++ with stream-style macros, automatic file rotation, configurable log levels, console output, and easy CMake integration.
+A **lightweight, high-performance, thread-friendly logging library** for C++ featuring stream-style macros, automatic log rotation, configurable log levels, file logging, console logging, and internal cache support.
 
 ---
 
@@ -26,7 +26,7 @@ make
 
 ---
 
-## ✅ Install (System-wide)
+## ✅ Install
 
 ```bash
 sudo make install
@@ -34,7 +34,7 @@ sudo make install
 
 ### 📦 Installed Files
 
-| Type         | Location                       |
+| Type         | Path                           |
 | ------------ | ------------------------------ |
 | Library      | `/usr/local/lib/libLogger.a`   |
 | Headers      | `/usr/local/include/`          |
@@ -42,7 +42,7 @@ sudo make install
 
 ---
 
-# 🚀 Usage
+# 🚀 Quick Start
 
 ## ✅ Basic Example
 
@@ -59,9 +59,9 @@ int main()
 
     log_info     << "Application Started";
     log_error    << "Connection Failed";
-    log_warn     << "Retrying...";
-    log_debug    << "Debug Value = " << 10;
-    log_critical << "Critical Shutdown";
+    log_warn     << "Retrying";
+    log_debug    << "Debug Data = " << 10;
+    log_critical << "Critical Error";
 
     return 0;
 }
@@ -119,13 +119,13 @@ int main()
 #define log_debug     LogStream(__FILE__, __LINE__, LogLevel::Debug)
 ```
 
-Each log automatically captures:
+Each log automatically includes:
 
-* Source file name
-* Line number
-* Log level
-* Message text
 * Timestamp
+* File Name
+* Line Number
+* Log Level
+* Message
 
 ---
 
@@ -162,9 +162,9 @@ enum class LogLevel
 
 ---
 
-## Example Configurations
+## Examples
 
-| Value | Enabled Levels                           |
+| Value | Enabled Logs                             |
 | ----- | ---------------------------------------- |
 | 1     | Error                                    |
 | 3     | Error + Info                             |
@@ -180,13 +180,9 @@ enum class LogLevel
 Logger::setLogLevel(127);
 ```
 
-Enables all logging levels including console output.
-
 ---
 
-# 📁 Log Output
-
-Logs are stored in:
+# 📁 Log File Output
 
 ```text
 <LOG_PATH>/<APP_NAME>_<DATE>_<TIME>.log
@@ -195,23 +191,23 @@ Logs are stored in:
 ### Example
 
 ```text
-./LOGS/MY_TEST_APP_27-04-2026_13:20:10.log
+./LOGS/MY_TEST_APP_27-04-2026_13:40:12.log
 ```
 
 ---
 
-# 🔁 Log Rotation Rules
+# 🔁 Log Rotation
 
-A new file is automatically created when **any condition is met**:
+A new log file is created automatically when:
 
-* 📦 Max file size exceeded
+* 📦 File size exceeds limit
 * ⏱️ Rotation time reached
 
 ---
 
 # ⚙️ Configuration
 
-## 🔹 Set Application Name
+## 🔹 Set App Name
 
 ```cpp
 Logger::setAppName("MY_APP");
@@ -219,7 +215,7 @@ Logger::setAppName("MY_APP");
 
 ---
 
-## 🔹 Set Log Directory
+## 🔹 Set Log Path
 
 ```cpp
 Logger::setLogPath("./LOGS");
@@ -235,7 +231,7 @@ Logger::setLogLevel(127);
 
 ---
 
-## 🔹 Set Max File Size
+## 🔹 Max File Size
 
 ```cpp
 Logger::setMaxFileSizeMB(50);
@@ -243,7 +239,7 @@ Logger::setMaxFileSizeMB(50);
 
 ---
 
-## 🔹 Set Rotation Interval
+## 🔹 Rotation Time (Minutes)
 
 ```cpp
 Logger::setMaxFileGenPeriodMin(10);
@@ -257,29 +253,34 @@ Logger::setMaxFileGenPeriodMin(10);
 Logger::desableCash();
 ```
 
-> Useful for debugging or immediate disk writes.
-> May reduce performance.
+**Description:**
+
+* Disables internal cache/buffer
+* Writes logs more directly to file
+* Useful for debugging
+* May reduce performance under high logging load
 
 ---
 
 # 🧠 Features
 
-* ⚡ High-performance logging
-* 🧵 Thread-friendly design
+* ⚡ High-speed logging
+* 🧵 Thread-friendly
 * 📁 File logging
-* 🔁 Automatic rotation (time + size)
-* 🖥️ Optional console output
-* 📍 File & line capture
-* 🔧 Bitmask log control
-* 🧱 Stream-style API (`<<`)
+* 🖥️ Console logging
+* 🔁 File rotation
+* 📍 File & line info
+* 🔧 Bitmask level control
+* 🧱 Stream-style syntax (`<<`)
 * 🔌 Easy CMake integration
-* 🧍 Singleton logger
+* 🧍 Singleton architecture
+* 💾 Internal cache support
 
 ---
 
-# 🧩 CMake Integration
+# 🧩 CMake Usage
 
-## Method 1: Installed Library
+## Installed Library
 
 ```cmake
 find_package(Logger REQUIRED)
@@ -290,7 +291,7 @@ target_link_libraries(app Logger::Logger)
 
 ---
 
-## Method 2: Custom Path
+## Custom Path
 
 ```cmake
 list(APPEND CMAKE_PREFIX_PATH "/your/install/path")
@@ -299,7 +300,7 @@ find_package(Logger REQUIRED)
 
 ---
 
-## Method 3: Add as Subdirectory
+## Add Subdirectory
 
 ```cmake
 add_subdirectory(logger-cpp)
@@ -318,9 +319,9 @@ target_link_libraries(app Logger)
 #include <Logger.h>
 ```
 
-* Ensure log folder exists or is creatable.
-* Static library (`.a`) by default.
-* Use `127` for full logging.
+* Ensure log directory exists
+* Static library build by default
+* Use `127` for all logging
 
 ---
 
@@ -330,8 +331,8 @@ target_link_libraries(app Logger)
 * Shared library (`.so`)
 * JSON structured logs
 * Per-module filtering
-* Colored terminal logs
-* Daily compression of old logs
+* Colored console logs
+* Cache tuning APIs
 
 ---
 
@@ -345,4 +346,4 @@ target_link_libraries(app Logger)
 
 Pull requests are welcome.
 
-If you find bugs or want new features, open an issue in the repository.
+If you find bugs or want new features, open an issue on GitHub.
