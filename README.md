@@ -2,6 +2,12 @@
 
 A **lightweight, high-performance, thread-friendly logging library** for C++ featuring stream-style macros, automatic log rotation, configurable log levels, file logging, console logging, and internal cache support.
 
+# 📦 Dependency
+
+This project uses my reusable utility library **cpp-utils** for common internal components such as thread-safe queueing and shared utilities.
+
+🔗 https://github.com/jayasankar-jp/cpp-utils
+
 ---
 
 # 🔗 Repository
@@ -14,10 +20,25 @@ cd logger-cpp
 ---
 
 # ⚙️ Installation
+## 📦 Install Dependency: cpp-utils
 
-## ✅ Build
+This project requires **cpp-utils**.
 
 ```bash
+git clone https://github.com/jayasankar-jp/cpp-utils.git
+cd cpp-utils
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+```
+
+## ✅ Build logger-cpp
+Navigate to your project directory.
+```bash
+git clone git@github.com:jayasankar-jp/logger-cpp.git
+cd logger-cpp
 mkdir build
 cd build
 cmake ..
@@ -277,6 +298,17 @@ Logger::desableCash();
 * 💾 Internal cache support
 
 ---
+# 🛠 Internal Design
+
+Logger is built using reusable modules from **cpp-utils**, helping reduce duplicated code and improve maintainability.
+
+Used components may include:
+
+- Thread-safe Queue
+- Common utility helpers
+- Shared infrastructure modules
+
+🔗 https://github.com/jayasankar-jp/cpp-utils
 
 # 🧩 CMake Usage
 
@@ -346,4 +378,16 @@ target_link_libraries(app Logger)
 
 Pull requests are welcome.
 
+
+If you find bugs or want new features, open an issue in the repository.
+
+## Note for Contributors
+
+Some internal modules come from **cpp-utils**.
+
+If making core utility changes, please also review:
+
+🔗 https://github.com/jayasankar-jp/cpp-utils
+
 If you find bugs or want new features, open an issue on GitHub.
+
