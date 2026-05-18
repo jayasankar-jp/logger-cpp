@@ -1,7 +1,7 @@
 #include "Logger.h"
 #include <iostream>
 #include <cstring>
-#include <signal.h>
+// #include <signal.h>
 #include <thread>
 std::mutex Logger::memutexS_mu;
 // std::mutex Logger::me_QueueMutex;
@@ -19,10 +19,8 @@ bool Logger::mei_isShoutDown = 0;
 Logger::Logger()
 {
     mei_isShoutDown = 0;
-    signal(SIGINT, [](int)
-           {
-           Logger::mei_isShoutDown=1;
-             exit(0); });
+    // signal(SIGINT, [](int)
+    //        { Logger::mei_isShoutDown = 1; });
 
     meui_buff_len = 0;
     memset(mecs_databuffer, 0, MAX_SIZE_BUFF);
@@ -52,7 +50,7 @@ Logger::Logger()
 
 Logger::~Logger()
 {
-    // std::cout << "Distructor call" << std::endl;
+    std::cout << "Distructor call" << std::endl;
     mei_isShoutDown = 1;
     meC_logQueue.close();
     if (me_writerThread.joinable())
