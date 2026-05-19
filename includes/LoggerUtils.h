@@ -18,10 +18,10 @@ inline void fng_getCurrentTime(
     localtime_r(&now, &ltm);
 #endif
 
-    // DD-MM-YYYY
+    // YYYY-MM-DD
     date.resize(10);
 
-    // HH:MM:SS
+    // HH-MM-SS
     timeStr.resize(8);
 
     char *d = &date[0];
@@ -41,21 +41,32 @@ inline void fng_getCurrentTime(
         buf[3] = '0' + (val % 10);
     };
 
-    // Date
-    twoDigit(d + 0, ltm.tm_mday);
-    d[2] = '-';
-    twoDigit(d + 3, ltm.tm_mon + 1);
-    d[5] = '-';
-    fourDigit(d + 6, ltm.tm_year + 1900);
+    // YYYY
+    fourDigit(d + 0, ltm.tm_year + 1900);
 
-    // Time
+    d[4] = '-';
+
+    // MM
+    twoDigit(d + 5, ltm.tm_mon + 1);
+
+    d[7] = '-';
+
+    // DD
+    twoDigit(d + 8, ltm.tm_mday);
+
+    // HH
     twoDigit(t + 0, ltm.tm_hour);
-    t[2] = ':';
+
+    t[2] = '-';
+
+    // MM
     twoDigit(t + 3, ltm.tm_min);
-    t[5] = ':';
+
+    t[5] = '-';
+
+    // SS
     twoDigit(t + 6, ltm.tm_sec);
 }
-
 inline std::string fng_getCurrentTime()
 {
     std::time_t now = std::time(nullptr);
