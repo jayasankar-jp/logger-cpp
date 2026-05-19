@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(Logger STATIC
     src/Logger.cpp
     src/LogStream.cpp
+    src/FileWriter.cpp
 )
 
 # Proper include visibility

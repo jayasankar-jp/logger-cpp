@@ -4,7 +4,6 @@
 #include <sstream>
 #include <string>
 #include "Defines.h"
-
 // Forward declaration (important)
 class Logger;
 
