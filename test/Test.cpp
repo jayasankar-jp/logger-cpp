@@ -6,7 +6,7 @@ int main()
 {
 
     Logger::getInstance();
-    Logger::setLogLevel(127); // 127-64 =63
+    Logger::setLogLevel(63); // 127-64 =63
     Logger::setAppName("MY_TEST_APP");
     Logger::setMaxFileSizeMB(50);
     Logger::setMaxFileGenPeriodMin(1);
