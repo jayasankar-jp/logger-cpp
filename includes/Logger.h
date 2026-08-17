@@ -32,7 +32,7 @@ private:
 
     std::thread me_writerThread;
 
-    std::string mefn_getLogType(LogLevel LOG_LEVEL);
+    const char* mefn_getLogType(LogLevel LOG_LEVEL);
     time_t met_initialTime;
     static FileWriter mec_fileWriter;
     Logger();

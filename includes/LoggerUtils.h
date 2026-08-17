@@ -67,7 +67,7 @@ inline void fng_getCurrentTime(
     // SS
     twoDigit(t + 6, ltm.tm_sec);
 }
-inline std::string fng_getCurrentTime()
+inline void fng_formatCurrentTime(std::string &dest)
 {
     std::time_t now = std::time(nullptr);
 
@@ -97,36 +97,30 @@ inline std::string fng_getCurrentTime()
     };
 
     buf[len++] = '[';
-
     twoDigit(ltm.tm_mday);
-
     buf[len++] = '-';
-
     twoDigit(ltm.tm_mon + 1);
-
     buf[len++] = '-';
-
     fourDigit(ltm.tm_year + 1900);
-
     buf[len++] = ']';
-
     buf[len++] = ':';
-
     buf[len++] = '[';
-
     twoDigit(ltm.tm_hour);
-
     buf[len++] = ':';
-
     twoDigit(ltm.tm_min);
-
     buf[len++] = ':';
-
     twoDigit(ltm.tm_sec);
-
     buf[len++] = ']';
 
-    return std::string(buf, len);
+    dest.append(buf, len);
+}
+
+inline std::string fng_getCurrentTime()
+{
+    std::string s;
+    s.reserve(32);
+    fng_formatCurrentTime(s);
+    return s;
 }
 
 #endif

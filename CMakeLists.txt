@@ -34,6 +34,12 @@ set_target_properties(test PROPERTIES
     OUTPUT_NAME "test.exe"
 )
 
+add_executable(benchmark
+    test/Benchmark.cpp
+)
+target_link_libraries(benchmark PRIVATE Logger)
+
+
 # -----------------------------
 # Output directories
 # -----------------------------

@@ -1,6 +1,5 @@
 #include "Logger.h"
 #include <iostream>
-
 #include <thread>
 #include "LoggerUtils.h"
 
@@ -9,6 +8,7 @@ std::string Logger::mes_appName = "APP";
 
 bool Logger::mei_isShoutDown = 0;
 FileWriter Logger::mec_fileWriter;
+
 Logger::Logger()
 {
     mei_isShoutDown = 0;
@@ -26,14 +26,11 @@ Logger::Logger()
 
 Logger::~Logger()
 {
-    // std::cout << "Distructor call" << std::endl;
     mei_isShoutDown = 1;
     mec_fileWriter.mei_isShoutDown.store(true);
     if (me_writerThread.joinable())
     {
-        // std::cout << "Joinable" << std::endl;
         me_writerThread.join();
-        // std::cout << "joined" << std::endl;
     }
 }
 
@@ -41,7 +38,8 @@ void Logger::fileWriter()
 {
     mec_fileWriter.mcfn_writer();
 }
-std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
+
+const char* Logger::mefn_getLogType(LogLevel LOG_LEVEL)
 {
     switch (LOG_LEVEL)
     {
@@ -57,45 +55,47 @@ std::string Logger::mefn_getLogType(LogLevel LOG_LEVEL)
         return "[-CR-]";
     case LogLevel::Debug:
         return "[-DB-]";
+    default:
+        return "";
     }
-    return "";
 }
 
 void Logger::write(const char *file, int line, LogLevel LOG_LEVEL, const std::string &msg)
 {
-
     if (mei_isShoutDown)
     {
         return;
     }
     if (mei_logLevel > 0)
     {
-
-        if (mei_logLevel & (int)LOG_LEVEL)
+        if (mei_logLevel & static_cast<int>(LOG_LEVEL))
         {
-            bool consol_e = mei_logLevel & (int)LogLevel::Console;
-
-            // std::stringstream logbuff;
-            time_t tl_currentTime = time(0);
-
-            // logbuff << "[" << mes_appName << "]" << mefn_getCurrentTime() << mefn_getLogType(LOG_LEVEL) << "[" << file << ":" << line << "][" << msg << "]" << std::endl;
-            bool console_e = mei_logLevel & (int)LogLevel::Console;
+            bool consol_e = mei_logLevel & static_cast<int>(LogLevel::Console);
 
             std::string logbuff;
-            logbuff.reserve(256);
+            logbuff.reserve(mes_appName.length() + msg.length() + 64);
 
-            logbuff += "[";
-            logbuff += mes_appName;
-            logbuff += "]";
-            logbuff += fng_getCurrentTime();
-            logbuff += mefn_getLogType(LOG_LEVEL);
-            logbuff += "[";
-            logbuff += file;
-            logbuff += ":";
-            logbuff += std::to_string(line);
-            logbuff += "][";
-            logbuff += msg;
-            logbuff += "]\n";
+            logbuff.push_back('[');
+            logbuff.append(mes_appName);
+            logbuff.push_back(']');
+            fng_formatCurrentTime(logbuff);
+            logbuff.append(mefn_getLogType(LOG_LEVEL));
+            logbuff.push_back('[');
+            logbuff.append(file ? file : "");
+            logbuff.push_back(':');
+
+            char lineBuf[16];
+            char *p = lineBuf + sizeof(lineBuf);
+            int l = line;
+            do {
+                *--p = '0' + static_cast<char>(l % 10);
+                l /= 10;
+            } while (l > 0);
+            logbuff.append(p, lineBuf + sizeof(lineBuf) - p);
+
+            logbuff.append("][");
+            logbuff.append(msg);
+            logbuff.append("]\n");
 
             mec_fileWriter.mcfn_insert(consol_e, logbuff);
         }

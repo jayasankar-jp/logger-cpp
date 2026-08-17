@@ -1,17 +1,13 @@
 #include "LogStream.h"
 #include "Logger.h"
-#include "iostream"
-#include <filesystem>
 
 LogStream::LogStream(const char *file, int line, LogLevel level)
     : file(file), line(line), level(level)
 {
-    // std::cout << "console trigger" << std::endl;
+    buffer.reserve(128);
 }
 
 LogStream::~LogStream()
 {
-
-    std::filesystem::path p(file);
-    Logger::getInstance().write(p.filename().c_str(), line, level, buffer.str());
+    Logger::getInstance().write(get_file_name(file), line, level, buffer);
 }
