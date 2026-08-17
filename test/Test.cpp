@@ -10,7 +10,7 @@ int main()
     Logger::setAppName("MY_TEST_APP");
     Logger::setMaxFileSizeMB(50);
     Logger::setMaxFileGenPeriodMin(1);
-    // Logger::desableCash();
+    Logger::desableCash();
 
     int data = 0;
     std::thread([]
@@ -21,7 +21,7 @@ int main()
             log_error << thread_id << " Execption : ";
             log_info << thread_id << " INFO a";
             log_debug << thread_id << " MY DEBUG MESSGAE";
-            // std::this_thread::sleep_for(std::chrono::nanoseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         } })
         .detach();
     std::thread([]
@@ -34,7 +34,7 @@ int main()
             log_debug << thread_id << " MY DEBUG test test test test";
             log_warn << thread_id << "Warning";
             log_critical << thread_id << "Critical msg";
-            // std::this_thread::sleep_for(std::chrono::nanoseconds(2));
+            std::this_thread::sleep_for(std::chrono::nanoseconds(1));
         } })
         .detach();
     log_info << " Login Thread : ";
@@ -43,7 +43,8 @@ int main()
     // };
     {
         std::this_thread::sleep_for(std::chrono::seconds(10));
-        exit(0);
+        break;
     };
+    log_info << "Thi is the end";
     return 0;
 }

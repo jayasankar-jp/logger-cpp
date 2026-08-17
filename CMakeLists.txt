@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_library(Logger STATIC
     src/Logger.cpp
     src/LogStream.cpp
+    src/FileWriter.cpp
 )
 
 # Proper include visibility
@@ -32,6 +33,12 @@ target_link_libraries(test PRIVATE Logger)
 set_target_properties(test PROPERTIES
     OUTPUT_NAME "test.exe"
 )
+
+add_executable(benchmark
+    test/Benchmark.cpp
+)
+target_link_libraries(benchmark PRIVATE Logger)
+
 
 # -----------------------------
 # Output directories
