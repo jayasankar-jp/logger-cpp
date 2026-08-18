@@ -1,0 +1,234 @@
+name: CI & Library Install
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # =========================================================================
+  # 1. Native OS Builds (Windows & Linux Ubuntu)
+  # =========================================================================
+  native-builds:
+    name: Native (${{ matrix.os }} - ${{ matrix.build_type }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Release, Debug]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version from Git Tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+          else
+            VER="1.0.0"
+          fi
+          echo "VERSION=${VER}" >> $GITHUB_ENV
+          echo "Building version: ${VER}"
+
+      - name: Configure CMake
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/install_dir
+
+      - name: Build Library & Tests
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Run CTest Suite
+        run: ctest --test-dir build -C ${{ matrix.build_type }} --output-on-failure
+
+      - name: Install Library
+        run: cmake --install build --config ${{ matrix.build_type }}
+
+      - name: Create Versioned Archive (Linux tar.gz)
+        if: runner.os == 'Linux'
+        run: |
+          cd ${{ runner.temp }}
+          tar -czvf logger-cpp-v${{ env.VERSION }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz -C install_dir .
+
+      - name: Create Versioned Archive (Windows zip)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          cd ${{ runner.temp }}
+          Compress-Archive -Path install_dir\* -DestinationPath logger-cpp-v$env:VERSION-${{ matrix.os }}-${{ matrix.build_type }}.zip
+
+      - name: Upload Versioned Linux Archive
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: logger-cpp-v${{ env.VERSION }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
+          path: ${{ runner.temp }}/logger-cpp-v${{ env.VERSION }}-${{ matrix.os }}-${{ matrix.build_type }}.tar.gz
+
+      - name: Upload Versioned Windows Archive
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: logger-cpp-v${{ env.VERSION }}-${{ matrix.os }}-${{ matrix.build_type }}.zip
+          path: ${{ runner.temp }}/logger-cpp-v${{ env.VERSION }}-${{ matrix.os }}-${{ matrix.build_type }}.zip
+
+  # =========================================================================
+  # 2. Linux Distributions Matrix (Ubuntu, Debian, Fedora, Alpine, Arch)
+  # =========================================================================
+  linux-distros:
+    name: Distro (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu-22.04
+            image: ubuntu:22.04
+            pkg_cmd: apt-get update && apt-get install -y cmake build-essential tar git
+          - distro: ubuntu-24.04
+            image: ubuntu:24.04
+            pkg_cmd: apt-get update && apt-get install -y cmake build-essential tar git
+          - distro: debian-latest
+            image: debian:latest
+            pkg_cmd: apt-get update && apt-get install -y cmake build-essential tar git
+          - distro: fedora-latest
+            image: fedora:latest
+            pkg_cmd: dnf install -y cmake gcc-c++ make tar git
+          - distro: alpine-latest
+            image: alpine:latest
+            pkg_cmd: apk add --no-cache cmake make g++ build-base linux-headers tar git bash
+          - distro: archlinux-latest
+            image: archlinux:latest
+            pkg_cmd: pacman -Syu --noconfirm cmake gcc make tar git
+
+    steps:
+      - name: Install Toolchain & Dependencies
+        run: ${{ matrix.pkg_cmd }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version from Git Tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+          else
+            VER="1.0.0"
+          fi
+          echo "VERSION=${VER}" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/tmp/install_dir
+
+      - name: Build Library & Tests
+        run: cmake --build build
+
+      - name: Run CTest Suite
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Install Library
+        run: cmake --install build
+
+      - name: Create Versioned Tarball (.tar.gz)
+        run: |
+          cd /tmp
+          tar -czvf logger-cpp-v${{ env.VERSION }}-${{ matrix.distro }}-x86_64.tar.gz -C install_dir .
+
+      - name: Upload Versioned Distro Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: logger-cpp-v${{ env.VERSION }}-${{ matrix.distro }}-x86_64.tar.gz
+          path: /tmp/logger-cpp-v${{ env.VERSION }}-${{ matrix.distro }}-x86_64.tar.gz
+
+  # =========================================================================
+  # 3. Raspberry Pi & ARM Architectures (ARMv7 32-bit & AArch64 64-bit)
+  # =========================================================================
+  raspberry-pi-arm:
+    name: Raspberry Pi (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: armv7
+            distro: ubuntu22.04
+          - arch: aarch64
+            distro: ubuntu22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version from Git Tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VER="${GITHUB_REF_NAME#v}"
+          else
+            VER="1.0.0"
+          fi
+          echo "VERSION=${VER}" >> $GITHUB_ENV
+
+      - name: Run Build, Test, Install & Packaging on ARM Runner (${{ matrix.arch }})
+        uses: uraimo/run-on-arch-action@v2.8.0
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+          githubToken: ${{ github.token }}
+          env: |
+            VERSION: ${{ env.VERSION }}
+          install: |
+            apt-get update
+            apt-get install -y cmake g++ make tar
+          run: |
+            ulimit -s unlimited || true
+            cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O0" -DCMAKE_INSTALL_PREFIX=/tmp/install_dir
+            cmake --build build
+            ctest --test-dir build --output-on-failure
+            cmake --install build
+
+            cd /tmp
+            tar -czvf logger-cpp-v${VERSION}-raspberrypi-${{ matrix.arch }}.tar.gz -C install_dir .
+
+      - name: Upload Versioned Raspberry Pi Tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: logger-cpp-v${{ env.VERSION }}-raspberrypi-${{ matrix.arch }}.tar.gz
+          path: /tmp/logger-cpp-v${{ env.VERSION }}-raspberrypi-${{ matrix.arch }}.tar.gz
+
+  # =========================================================================
+  # 4. Automatic GitHub Release Publishing (Triggered on Git Tag Push: v*)
+  # =========================================================================
+  create-github-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [native-builds, linux-distros, raspberry-pi-arm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download All Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_artifacts
+
+      - name: Collect & Flatten Binary Archives
+        run: |
+          mkdir release_dist
+          find release_artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release_dist/ \;
+          ls -la release_dist/
+
+      - name: Publish Official GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_dist/*
+          generate_release_notes: true

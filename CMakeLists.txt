@@ -24,15 +24,19 @@ target_include_directories(Logger PUBLIC
 # -----------------------------
 # Test Executable
 # -----------------------------
-add_executable(test
+enable_testing()
+
+add_executable(logger_test
     test/Test.cpp
 )
 
-target_link_libraries(test PRIVATE Logger)
+target_link_libraries(logger_test PRIVATE Logger)
 
-set_target_properties(test PROPERTIES
+set_target_properties(logger_test PROPERTIES
     OUTPUT_NAME "test.exe"
 )
+
+add_test(NAME LoggerTest COMMAND logger_test)
 
 add_executable(benchmark
     test/Benchmark.cpp
