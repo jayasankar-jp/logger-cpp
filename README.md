@@ -19,47 +19,72 @@ cd logger-cpp
 
 ---
 
-# ⚙️ Installation
-## 📦 Install Dependency: cpp-utils
+# ⚙️ Installation & Build
 
-This project requires **cpp-utils**.
+## 📋 Prerequisites
+- C++17 compliant compiler (`g++`, `clang++`, or MSVC)
+- CMake 3.15 or higher
 
+---
+
+## 📦 Option 1: Install from Release Binaries (Pre-built Archives)
+
+Download the pre-compiled archive for your OS/architecture from [GitHub Releases](https://github.com/jayasankar-jp/logger-cpp/releases).
+
+### Linux (Ubuntu / Debian / Fedora / Alpine / Arch / Raspberry Pi)
 ```bash
-git clone https://github.com/jayasankar-jp/cpp-utils.git
-cd cpp-utils
-mkdir build
-cd build
-cmake ..
-make
-sudo make install
+# Download and extract to system path or custom directory (e.g. /usr/local)
+sudo tar -xzvf logger-cpp-v1.0.0-ubuntu-22.04-x86_64.tar.gz -C /usr/local
 ```
 
-## ✅ Build logger-cpp
-Navigate to your project directory.
+### Windows
+Extract the downloaded `.zip` package to your desired directory (e.g., `C:\Program Files\Logger`).
+
+---
+
+## 🛠️ Option 2: Build & Install from Source
+
+> 💡 **Note:** If `cpp-utils` is not installed on your system, CMake will **automatically fetch and build it** for you during configuration!
+
+### Quick Build & Install (Automatic Dependency Resolution)
 ```bash
 git clone git@github.com:jayasankar-jp/logger-cpp.git
 cd logger-cpp
-mkdir build
-cd build
-cmake ..
-make
+
+# Configure (Fetches cpp-utils automatically if needed)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+# Build
+cmake --build build
+
+# Install (Linux/macOS)
+sudo cmake --install build
 ```
 
 ---
 
-## ✅ Install
-
+### Optional: Pre-installing `cpp-utils` Manually
+If you prefer to install `cpp-utils` onto your system beforehand:
 ```bash
-sudo make install
+git clone https://github.com/jayasankar-jp/cpp-utils.git
+cd cpp-utils
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
+cd ..
 ```
 
-### 📦 Installed Files
+# Install (Windows - Run as Administrator / Powershell)
+cmake --install build --prefix "C:\Program Files\Logger"
+```
 
-| Type         | Path                           |
-| ------------ | ------------------------------ |
-| Library      | `/usr/local/lib/libLogger.a`   |
-| Headers      | `/usr/local/include/`          |
-| CMake Config | `/usr/local/lib/cmake/Logger/` |
+### 📦 Installed Files Location
+
+| Type         | Linux / macOS Path             | Windows Default Path                |
+| ------------ | ------------------------------ | ----------------------------------- |
+| Library      | `/usr/local/lib/libLogger.a`   | `<prefix>/lib/Logger.lib`           |
+| Headers      | `/usr/local/include/`          | `<prefix>/include/`                 |
+| CMake Config | `/usr/local/lib/cmake/Logger/` | `<prefix>/lib/cmake/Logger/`       |
 
 ---
 
