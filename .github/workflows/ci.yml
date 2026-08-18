@@ -212,7 +212,7 @@ jobs:
             VERSION: ${{ env.VERSION }}
           install: |
             apt-get update
-            apt-get install -y cmake g++ make tar
+            apt-get install -y cmake g++ make tar git
           run: |
             ulimit -s unlimited || true
             git clone https://github.com/jayasankar-jp/cpp-utils.git cpp-utils
