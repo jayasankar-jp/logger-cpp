@@ -31,11 +31,21 @@ add_library(Logger STATIC
     src/FileWriter.cpp
 )
 
-# Proper include visibility
+# Proper include visibility & dependencies
 target_include_directories(Logger PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/includes>
     $<INSTALL_INTERFACE:include>
 )
+
+if(TARGET internalLib)
+    target_link_libraries(Logger PUBLIC internalLib)
+    target_include_directories(Logger PUBLIC $<BUILD_INTERFACE:${cpp-utils_SOURCE_DIR}/includes>)
+elseif(TARGET cpp-utils::cpp-utils)
+    target_link_libraries(Logger PUBLIC cpp-utils::cpp-utils)
+else()
+    # Fallback to prefix path includes if installed to custom prefix
+    target_include_directories(Logger PUBLIC $<BUILD_INTERFACE:${CMAKE_PREFIX_PATH}/include>)
+endif()
 
 # -----------------------------
 # Test Executable
