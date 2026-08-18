@@ -44,11 +44,14 @@ Extract the downloaded `.zip` package to your desired directory (e.g., `C:\Progr
 
 ## 🛠️ Option 2: Build & Install from Source
 
+> 💡 **Note:** If `cpp-utils` is not installed on your system, CMake will **automatically fetch and build it** for you during configuration!
+
+### Quick Build & Install (Automatic Dependency Resolution)
 ```bash
 git clone git@github.com:jayasankar-jp/logger-cpp.git
 cd logger-cpp
 
-# Configure
+# Configure (Fetches cpp-utils automatically if needed)
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 
 # Build
@@ -56,6 +59,20 @@ cmake --build build
 
 # Install (Linux/macOS)
 sudo cmake --install build
+```
+
+---
+
+### Optional: Pre-installing `cpp-utils` Manually
+If you prefer to install `cpp-utils` onto your system beforehand:
+```bash
+git clone https://github.com/jayasankar-jp/cpp-utils.git
+cd cpp-utils
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+sudo cmake --install build
+cd ..
+```
 
 # Install (Windows - Run as Administrator / Powershell)
 cmake --install build --prefix "C:\Program Files\Logger"

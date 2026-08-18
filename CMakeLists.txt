@@ -7,6 +7,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # -----------------------------
+# Dependencies (cpp-utils)
+# -----------------------------
+include(FetchContent)
+find_package(cpp-utils QUIET)
+
+if(NOT cpp-utils_FOUND)
+    message(STATUS "cpp-utils not found locally. Fetching from GitHub repository...")
+    FetchContent_Declare(
+        cpp-utils
+        GIT_REPOSITORY https://github.com/jayasankar-jp/cpp-utils.git
+        GIT_TAG        master
+    )
+    FetchContent_MakeAvailable(cpp-utils)
+endif()
+
+# -----------------------------
 # Library Target
 # -----------------------------
 add_library(Logger STATIC

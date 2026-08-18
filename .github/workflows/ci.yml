@@ -35,11 +35,24 @@ jobs:
           echo "VERSION=${VER}" >> $GITHUB_ENV
           echo "Building version: ${VER}"
 
+      - name: Checkout cpp-utils dependency
+        uses: actions/checkout@v4
+        with:
+          repository: jayasankar-jp/cpp-utils
+          path: cpp-utils
+
+      - name: Build & Install cpp-utils
+        run: |
+          cmake -B cpp-utils/build -S cpp-utils -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/install_dir
+          cmake --build cpp-utils/build --config ${{ matrix.build_type }}
+          cmake --install cpp-utils/build --config ${{ matrix.build_type }}
+
       - name: Configure CMake
         run: >
           cmake -B build
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/install_dir
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/install_dir
 
       - name: Build Library & Tests
         run: cmake --build build --config ${{ matrix.build_type }}
@@ -114,6 +127,18 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Checkout cpp-utils dependency
+        uses: actions/checkout@v4
+        with:
+          repository: jayasankar-jp/cpp-utils
+          path: cpp-utils
+
+      - name: Build & Install cpp-utils
+        run: |
+          cmake -B cpp-utils/build -S cpp-utils -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local
+          cmake --build cpp-utils/build
+          cmake --install cpp-utils/build
 
       - name: Extract Version from Git Tag
         shell: bash
@@ -190,6 +215,11 @@ jobs:
             apt-get install -y cmake g++ make tar
           run: |
             ulimit -s unlimited || true
+            git clone https://github.com/jayasankar-jp/cpp-utils.git cpp-utils
+            cmake -B cpp-utils/build -S cpp-utils -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O0" -DCMAKE_INSTALL_PREFIX=/usr/local
+            cmake --build cpp-utils/build
+            cmake --install cpp-utils/build
+
             cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-O0" -DCMAKE_INSTALL_PREFIX=/tmp/install_dir
             cmake --build build
             ctest --test-dir build --output-on-failure
